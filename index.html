@@ -415,7 +415,7 @@ const state = {
 
 /* ---------- oyuncu ---------- */
 const player = {
- pos: new THREE.Vector3(0, DECK_Y + 1.7, -62),
+ pos: new THREE.Vector3(0, DECK_Y + 1.7, -48),
  vel: new THREE.Vector3(), yaw: Math.PI, pitch: 0,
  onGround: true, groundY: DECK_Y + 0.3, crouch: false, bob: 0,
 };
@@ -773,7 +773,7 @@ function resetGame() {
  state.weapon = 'rifle'; state.reloading = 0; state.inTurret = null;
  state.over = false; state.nvg = false;
  $('nvg').classList.remove('on');
- player.pos.set(0, DECK_Y + 1.7, -62);
+ player.pos.set(0, DECK_Y + 1.7, -48);
  player.vel.set(0, 0, 0); player.yaw = Math.PI; player.pitch = 0;
  startLevel();
 }
