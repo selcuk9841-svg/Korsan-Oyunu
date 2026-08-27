@@ -364,6 +364,63 @@ const Audio = (() => {
  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
  src.connect(f); f.connect(g); g.connect(master); src.start(t);
  }
+ /* gercekci silah sesi: catlama transient + govde + kuyruk yankisi */
+ function gunshot(o) {
+ if (!ctx) return;
+ const t = ctx.currentTime;
+ const out = ctx.createGain(); out.gain.value = o.vol; out.connect(master);
+
+ const crackLen = Math.max(1, (ctx.sampleRate * 0.035) | 0);
+ const cb = ctx.createBuffer(1, crackLen, ctx.sampleRate);
+ const cd = cb.getChannelData(0);
+ for (let i = 0; i < crackLen; i++) {
+ const e = Math.pow(1 - i / crackLen, 2.4);
+ cd[i] = (Math.random() * 2 - 1) * e;
+ }
+ const cs = ctx.createBufferSource(); cs.buffer = cb;
+ const chp = ctx.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 1400;
+ const cg = ctx.createGain(); cg.gain.value = 1.15;
+ cs.connect(chp); chp.connect(cg); cg.connect(out); cs.start(t);
+
+ const bodyLen = Math.max(1, (ctx.sampleRate * o.body) | 0);
+ const bb = ctx.createBuffer(1, bodyLen, ctx.sampleRate);
+ const bd = bb.getChannelData(0);
+ for (let i = 0; i < bodyLen; i++) {
+ const e = Math.pow(1 - i / bodyLen, 3.1);
+ bd[i] = (Math.random() * 2 - 1) * e;
+ }
+ const bs = ctx.createBufferSource(); bs.buffer = bb;
+ const blp = ctx.createBiquadFilter(); blp.type = 'lowpass';
+ blp.frequency.setValueAtTime(o.cut, t);
+ blp.frequency.exponentialRampToValueAtTime(220, t + o.body);
+ blp.Q.value = 1.4;
+ const bg = ctx.createGain(); bg.gain.value = 1;
+ bs.connect(blp); blp.connect(bg); bg.connect(out); bs.start(t);
+
+ const th = ctx.createOscillator(); th.type = 'sine';
+ th.frequency.setValueAtTime(o.thump, t);
+ th.frequency.exponentialRampToValueAtTime(34, t + o.body * 0.9);
+ const tg = ctx.createGain();
+ tg.gain.setValueAtTime(0.7, t);
+ tg.gain.exponentialRampToValueAtTime(0.001, t + o.body * 1.05);
+ th.connect(tg); tg.connect(out); th.start(t); th.stop(t + o.body * 1.15);
+
+ if (o.tail > 0) {
+ const tl = Math.max(1, (ctx.sampleRate * o.tail) | 0);
+ const tb = ctx.createBuffer(1, tl, ctx.sampleRate);
+ const td = tb.getChannelData(0);
+ for (let i = 0; i < tl; i++) {
+ const e = Math.pow(1 - i / tl, 1.7);
+ td[i] = (Math.random() * 2 - 1) * e * 0.5;
+ }
+ const ts = ctx.createBufferSource(); ts.buffer = tb;
+ const tbp = ctx.createBiquadFilter(); tbp.type = 'bandpass';
+ tbp.frequency.value = 620; tbp.Q.value = 0.7;
+ const tgn = ctx.createGain(); tgn.gain.value = o.tailVol;
+ ts.connect(tbp); tbp.connect(tgn); tgn.connect(out);
+ ts.start(t + 0.02);
+ }
+ }
  return {
  init,
  resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); },
