@@ -1145,6 +1145,194 @@ function loop() {
  update(dt);
  renderer.render(scene, camera);
 }
+/* ================== DUZELTME + MOBIL DOKUNMATIK KONTROLLER ================== */
+player.pos.set(0, DECK_Y + 1.7, -48);
+goldGroup.position.z = -52;
+goldGlow.position.z = -52;
+{
+ const _reset = resetGame;
+ resetGame = function () { _reset(); player.pos.set(0, DECK_Y + 1.7, -48); };
+}
+
+const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+function bindKey(code, fn) {
+ let manual = false;
+ Object.defineProperty(keys, code, {
+ configurable: true,
+ get: () => manual || fn(),
+ set: (v) => { manual = !!v; },
+ });
+}
+
+if (isTouch) {
+ renderer.domElement.requestPointerLock = () => {};
+ document.exitPointerLock = () => {};
+ renderer.setPixelRatio(1);
+ renderer.shadowMap.enabled = false;
+ sun.castShadow = false;
+
+ const css = document.createElement('style');
+ css.textContent =
+ '#mob{position:fixed;inset:0;z-index:4;pointer-events:none;user-select:none;-webkit-user-select:none}' +
+ '#stick{position:absolute;left:20px;bottom:20px;width:132px;height:132px;border-radius:50%;' +
+ 'background:rgba(8,26,42,.42);border:2px solid rgba(140,200,255,.35);pointer-events:auto;touch-action:none}' +
+ '#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;' +
+ 'background:rgba(160,215,255,.5);border:2px solid rgba(225,242,255,.8)}' +
+ '#mobR{position:absolute;right:16px;bottom:16px;display:grid;grid-template-columns:repeat(3,62px);' +
+ 'grid-auto-rows:62px;gap:9px;justify-items:center;align-items:center;pointer-events:none}' +
+ '.mbtn{width:60px;height:60px;border-radius:50%;background:rgba(8,26,42,.55);color:#dff0ff;' +
+ 'border:2px solid rgba(140,200,255,.45);font:700 10px/1.15 Arial,sans-serif;display:flex;' +
+ 'align-items:center;justify-content:center;text-align:center;pointer-events:auto;touch-action:none;' +
+ '-webkit-tap-highlight-color:transparent}' +
+ '.mbtn.on{background:rgba(255,196,70,.85);color:#04121d;border-color:#ffd45e}' +
+ '#btnFire{grid-column:3;grid-row:3;width:86px;height:86px;font-size:13px;' +
+ 'background:rgba(196,52,40,.62);border-color:rgba(255,150,130,.75)}' +
+ '#rotate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;' +
+ 'background:#04121d;text-align:center;padding:32px;font-size:17px;line-height:1.6;color:#ffd45e}' +
+ '#rotate.on{display:flex}';
+ document.head.appendChild(css);
+
+ const mob = document.createElement('div');
+ mob.id = 'mob';
+ mob.innerHTML =
+ '<div id="stick"><div id="knob"></div></div>' +
+ '<div id="mobR">' +
+ '<div class="mbtn" id="btnNvg">GECE<br>GORUS</div>' +
+ '<div class="mbtn" id="btnTurret">MITRAL<br>YOZ</div>' +
+ '<div class="mbtn" id="btnAds">DUR<br>BUN</div>' +
+ '<div class="mbtn" id="btnReload">SARJOR</div>' +
+ '<div class="mbtn" id="btnSwap">SILAH</div>' +
+ '<div class="mbtn" id="btnJump">ZIPLA</div>' +
+ '<div class="mbtn" id="btnCrouch">EGIL</div>' +
+ '<div class="mbtn" id="btnFire">ATES</div>' +
+ '</div>';
+ document.body.appendChild(mob);
+
+ const rot = document.createElement('div');
+ rot.id = 'rotate';
+ rot.innerHTML = 'Telefonu yatay cevir<br><span style="font-size:14px;opacity:.75">Kargo gemisi savunmasi yatay modda oynanir</span>';
+ document.body.appendChild(rot);
+ const checkRot = () => rot.classList.toggle('on', innerHeight > innerWidth);
+ addEventListener('resize', checkRot);
+ addEventListener('orientationchange', () => setTimeout(checkRot, 250));
+ checkRot();
+
+ /* ---- sol joystick ---- */
+ const axis = { x: 0, y: 0, mag: 0 };
+ const stick = $('stick'), knob = $('knob');
+ const R = 50;
+ let stickId = null, cx = 0, cy = 0;
+ stick.addEventListener('pointerdown', (e) => {
+ stickId = e.pointerId;
+ const r = stick.getBoundingClientRect();
+ cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+ stick.setPointerCapture(e.pointerId);
+ moveStick(e);
+ e.preventDefault();
+ });
+ stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) moveStick(e); });
+ const endStick = (e) => {
+ if (e.pointerId !== stickId) return;
+ stickId = null; axis.x = axis.y = axis.mag = 0;
+ knob.style.transform = 'translate(0,0)';
+ };
+ stick.addEventListener('pointerup', endStick);
+ stick.addEventListener('pointercancel', endStick);
+ function moveStick(e) {
+ let dx = e.clientX - cx, dy = e.clientY - cy;
+ const d = Math.hypot(dx, dy) || 1;
+ const k = Math.min(1, R / d);
+ const vx = dx * k, vy = dy * k;
+ knob.style.transform = 'translate(' + vx + 'px,' + vy + 'px)';
+ axis.x = vx / R; axis.y = -vy / R;
+ axis.mag = Math.min(1, d / R);
+ }
+
+ bindKey('KeyW', () => axis.y > 0.28);
+ bindKey('KeyS', () => axis.y < -0.28);
+ bindKey('KeyD', () => axis.x > 0.28);
+ bindKey('KeyA', () => axis.x < -0.28);
+ bindKey('ShiftLeft', () => axis.mag > 0.86);
+
+ /* ---- sag taraf: bakis surukleme ---- */
+ const cv = renderer.domElement;
+ cv.style.touchAction = 'none';
+ let lookId = null, lx = 0, ly = 0;
+ cv.addEventListener('pointerdown', (e) => {
+ if (lookId !== null) return;
+ lookId = e.pointerId; lx = e.clientX; ly = e.clientY;
+ cv.setPointerCapture(e.pointerId);
+ });
+ cv.addEventListener('pointermove', (e) => {
+ if (e.pointerId !== lookId) return;
+ const s = state.scoped ? 0.0021 : 0.0052;
+ player.yaw -= (e.clientX - lx) * s;
+ player.pitch = clamp(player.pitch - (e.clientY - ly) * s, -1.35, 1.35);
+ lx = e.clientX; ly = e.clientY;
+ });
+ const endLook = (e) => { if (e.pointerId === lookId) lookId = null; };
+ cv.addEventListener('pointerup', endLook);
+ cv.addEventListener('pointercancel', endLook);
+
+ /* ---- butonlar ---- */
+ const tap = (id, down, up) => {
+ const el = $(id);
+ el.addEventListener('pointerdown', (e) => { el.classList.add('on'); down && down(); e.preventDefault(); });
+ const off = () => { el.classList.remove('on'); up && up(); };
+ el.addEventListener('pointerup', off);
+ el.addEventListener('pointercancel', off);
+ el.addEventListener('pointerleave', off);
+ };
+ tap('btnFire', () => { mouseDown = true; shoot(); }, () => { mouseDown = false; });
+ tap('btnJump', () => {
+ if (player.onGround && !state.inTurret) { player.vel.y = JUMP; player.onGround = false; }
+ });
+ tap('btnReload', () => startReload());
+ tap('btnSwap', () => setWeapon(state.weapon === 'rifle' ? 'sniper' : 'rifle'));
+ tap('btnTurret', () => toggleTurret());
+ tap('btnNvg', () => toggleNvg());
+
+ let adsOn = false;
+ $('btnAds').addEventListener('pointerdown', (e) => {
+ adsOn = !adsOn; setScope(adsOn);
+ $('btnAds').classList.toggle('on', adsOn);
+ e.preventDefault();
+ });
+ let crouchOn = false;
+ $('btnCrouch').addEventListener('pointerdown', (e) => {
+ crouchOn = !crouchOn; keys.ControlLeft = crouchOn;
+ $('btnCrouch').classList.toggle('on', crouchOn);
+ e.preventDefault();
+ });
+
+ /* ---- tam ekran + yatay kilit ---- */
+ const goFull = () => {
+ const el = document.documentElement;
+ const rf = el.requestFullscreen || el.webkitRequestFullscreen;
+ if (rf) { try { rf.call(el); } catch (_) {} }
+ if (screen.orientation && screen.orientation.lock) {
+ screen.orientation.lock('landscape').catch(() => {});
+ }
+ };
+ $('startBtn').addEventListener('click', goFull);
+ $('retryBtn').addEventListener('click', goFull);
+
+ /* ---- masaustu tus listesini gizle, dokunmatik yardim yaz ---- */
+ const keysBox = document.querySelector('#startScreen .keys');
+ if (keysBox) {
+ keysBox.innerHTML =
+ '<b>Sol joystick</b><span>Hareket (sonuna kadar it = kosma)</span>' +
+ '<b>Sag ekran</b><span>Parmakla surukleyerek nisan al</span>' +
+ '<b>ATES</b><span>Basili tut = otomatik ates</span>' +
+ '<b>DURBUN</b><span>Nisangah / keskin nisanci durbunu</span>' +
+ '<b>SILAH</b><span>Tufek ve keskin nisanci arasi gecis</span>' +
+ '<b>ZIPLA / EGIL</b><span>Konteynere cik, siper al</span>' +
+ '<b>SARJOR</b><span>Sarjor degistir</span>' +
+ '<b>MITRALYOZ</b><span>Yakindaki mevziye bin / in</span>' +
+ '<b>GECE GORUS</b><span>Gece bolumlerinde gece gorus modu</span>';
+ }
+}
 updateHud();
 loop();
 </script>
