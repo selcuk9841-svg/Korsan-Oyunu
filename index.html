@@ -1483,13 +1483,9 @@ if (isTouch) {
  axis.x = vx / R; axis.y = -vy / R;
  axis.mag = Math.min(1, d / R);
  }
-
- bindKey('KeyW', () => axis.y > 0.28);
- bindKey('KeyS', () => axis.y < -0.28);
- bindKey('KeyD', () => axis.x > 0.28);
- bindKey('KeyA', () => axis.x < -0.28);
+ // 360 derece analog hareket: ham eksenler dogrudan oyun donguse verilir
+ window.moveAxis = axis;
  bindKey('ShiftLeft', () => axis.mag > 0.86);
-
  /* ---- sag taraf: bakis surukleme ---- */
  const cv = renderer.domElement;
  cv.style.touchAction = 'none';
