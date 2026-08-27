@@ -182,14 +182,37 @@ const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK_W, 0.6, DECK_L), deckMat)
 deck.position.y = DECK_Y;
 deck.receiveShadow = true;
 ship.add(deck);
+/* ---------- guverte korkuluklari (trabzan): tum cevre ---------- */
+const railMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, roughness: 0.55, metalness: 0.85 });
+const parapetMat = new THREE.MeshStandardMaterial({ color: 0x5b6a76, roughness: 0.9, metalness: 0.4 });
+const RAIL_H = 1.25;
 
-for (const sx of [-1, 1]) {
- const rail = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.5, DECK_L), steelRust);
- rail.position.set(sx * (DECK_W / 2 - 0.3), DECK_Y + 1, 0);
- rail.castShadow = true;
- ship.add(rail);
+function railRun(len, x, z, rotY) {
+ const g = new THREE.Group();
+ const par = new THREE.Mesh(new THREE.BoxGeometry(len, 0.55, 0.22), parapetMat);
+ par.position.y = 0.28;
+ par.castShadow = par.receiveShadow = true;
+ g.add(par);
+ for (const hy of [0.82, RAIL_H]) {
+ const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, len, 6), railMat);
+ bar.rotation.z = Math.PI / 2;
+ bar.position.y = hy;
+ g.add(bar);
+ }
+ const n = Math.max(2, Math.round(len / 3.2));
+ for (let i = 0; i <= n; i++) {
+ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, RAIL_H, 6), railMat);
+ p.position.set(-len / 2 + (len / n) * i, RAIL_H / 2, 0);
+ p.castShadow = true;
+ g.add(p);
+ }
+ g.position.set(x, DECK_Y + 0.3, z);
+ g.rotation.y = rotY;
+ ship.add(g);
 }
-
+for (const sx of [-1, 1]) railRun(DECK_L, sx * (DECK_W / 2 - 0.25), 0, 0);
+railRun(DECK_W, 0, -(DECK_L / 2 - 0.25), Math.PI / 2);
+railRun(DECK_W, 0, DECK_L / 2 - 0.25, Math.PI / 2);
 /* ---------- konteynerler (siper + platform) ---------- */
 const boxes = [];
 const contColors = [0xb0402f, 0x2f6ab0, 0x2f8f5a, 0xc9a227, 0x7a4fa3, 0xa85c25];
