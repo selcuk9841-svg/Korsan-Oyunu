@@ -6,7 +6,7 @@
 <title>Kargo Gemisi Savunmasi</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:#05121c;font-family:Arial,Helvetica,sans-serif;color:#e8f2ff}
+html,body{width:100%;height:100%;overflow:hidden;background:#05121c;font-family:Arial,Helvetica,sans-serif;color:#e8f2ff;touch-action:none}
 canvas{display:block}
 #ui{position:fixed;inset:0;pointer-events:none;user-select:none}
 .panel{position:absolute;background:rgba(6,20,32,.72);border:1px solid rgba(120,190,255,.35);border-radius:8px;padding:10px 14px;backdrop-filter:blur(3px)}
@@ -47,9 +47,17 @@ canvas{display:block}
 .btn:hover{filter:brightness(1.08)}
 .btn.sec{background:linear-gradient(180deg,#5fb9ff,#2b86d6);color:#04121d}
 .btn.ghost{background:transparent;border:1px dashed rgba(150,200,255,.5);color:#9fc8e8}
-.btn:disabled{opacity:.4;cursor:not-allowed}
 .shopRow{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:8px 0;border-bottom:1px solid rgba(120,190,255,.15)}
 #goldBig{font-size:22px;color:#ffd45e;font-weight:700}
+/* Mobil Kontroller */
+#mobileControls{position:absolute;inset:0;pointer-events:none;display:none}
+.mob-btn{position:absolute;pointer-events:auto;background:rgba(100,180,255,0.25);border:2px solid rgba(255,255,255,0.5);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:14px;user-select:none}
+#joystickArea{position:absolute;left:30px;bottom:30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);pointer-events:auto}
+#joystickKnob{position:absolute;left:45px;top:45px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.6)}
+#mobShoot{right:40px;bottom:40px;width:80px;height:80px;background:rgba(255,60,60,0.4);border-color:#ff4d4d}
+#mobJump{right:140px;bottom:40px;width:60px;height:60px}
+#mobReload{right:40px;bottom:140px;width:60px;height:60px}
+#mobSwap{right:110px;bottom:140px;width:60px;height:60px;font-size:12px}
 </style>
 </head>
 <body>
@@ -72,19 +80,26 @@ canvas{display:block}
  <div id="hint"></div>
 </div>
 
+<!-- Mobil Kontrol Arayüzü -->
+<div id="mobileControls">
+  <div id="joystickArea"><div id="joystickKnob"></div></div>
+  <div class="mob-btn" id="mobShoot">ATES</div>
+  <div class="mob-btn" id="mobJump">ZIP</div>
+  <div class="mob-btn" id="mobReload">MSR</div>
+  <div class="mob-btn" id="mobSwap">SILAH</div>
+</div>
+
 <div class="overlay on" id="startScreen"><div class="card">
  <h1>KARGO GEMISI SAVUNMASI</h1>
  <p>Okyanusta ilerleyen kargo gemisinin guvertesindesin. Her yonden yaklasan korsan botlarini durdur, ambardaki kulce altinlari koru.</p>
  <div class="keys">
- <b>W A S D</b><span>Hareket</span>
- <b>Fare</b><span>Nisan alma</span>
- <b>Sol tik</b><span>Ates</span>
+ <b>W A SD / Joystick</b><span>Hareket</span>
+ <b>Fare / Ekran</b><span>Nisan alma</span>
+ <b>Sol tik / Ates Butonu</b><span>Ates</span>
  <b>Sag tik</b><span>Durbun / nisangah</span>
  <b>1 / 2 / Q</b><span>Silah degistir</span>
- <b>Space</b><span>Ziplama (konteynere cik)</span>
- <b>Shift</b><span>Kosma</span>
- <b>Ctrl</b><span>Egilme</span>
- <b>R</b><span>Sarjor degistir</span>
+ <b>Space / Ziplama</b><span>Ziplama (konteynere cik)</span>
+ <b>R / MSR</b><span>Sarjor degistir</span>
  <b>E</b><span>Mitralyoze bin / in</span>
  <b>N</b><span>Gece gorus durbunu</span>
  </div>
@@ -114,12 +129,10 @@ canvas{display:block}
 <script type="module">
 import * as THREE from 'three';
 
-/* ---------- kisayollar ---------- */
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
-/* ---------- sahne ---------- */
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 4000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -145,10 +158,8 @@ scene.add(sun);
 const hemi = new THREE.HemisphereLight(0xbcd9f0, 0x1b3a4d, 0.75);
 scene.add(hemi);
 
-/* ---------- okyanus ---------- */
 const oceanGeo = new THREE.PlaneGeometry(4000, 4000, 120, 120);
 oceanGeo.rotateX(-Math.PI / 2);
-const oceanBase = Float32Array.from(oceanGeo.attributes.position.array);
 const oceanMat = new THREE.MeshStandardMaterial({
  color: 0x123a52, roughness: 0.35, metalness: 0.55, transparent: true, opacity: 0.97
 });
@@ -157,7 +168,6 @@ ocean.position.y = -2;
 ocean.receiveShadow = true;
 scene.add(ocean);
 
-/* ---------- gemi ---------- */
 const ship = new THREE.Group();
 scene.add(ship);
 
@@ -204,7 +214,6 @@ funnel.position.set(0, DECK_Y + 17, DECK_L / 2 - 6);
 funnel.castShadow = true;
 ship.add(funnel);
 
-/* ---------- konteynerler (siper + platform) ---------- */
 const boxes = [];
 const contColors = [0xb0402f, 0x2f6ab0, 0x2f8f5a, 0xc9a227, 0x7a4fa3, 0xa85c25];
 function addContainer(x, y, z, w, h, l, rotY = 0) {
@@ -228,11 +237,9 @@ const layout = [
 for (const [x, z, stack] of layout) {
  for (let i = 0; i < stack; i++) addContainer(x, DECK_Y + 0.3 + i * CH, z, CW, CH, CL);
 }
-// rampa: oyuncu tirmanabilsin
 addContainer(-4.5, DECK_Y + 0.3, -56, 6, 1.6, 8);
 addContainer(-4.5, DECK_Y + 1.9, -50, 6, 1.6, 8);
 
-/* ---------- mitralyoz mevzileri ---------- */
 const turrets = [];
 function addTurret(x, z) {
  const g = new THREE.Group();
@@ -253,7 +260,6 @@ function addTurret(x, z) {
 addTurret(-14.5, -58); addTurret(14.5, -58);
 addTurret(-14.5, 34); addTurret(14.5, 34);
 
-/* ---------- ambar altinlari ---------- */
 const goldGroup = new THREE.Group();
 const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc63a, roughness: 0.28, metalness: 1 });
 for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
@@ -267,7 +273,6 @@ const goldGlow = new THREE.PointLight(0xffc63a, 2.2, 22);
 goldGlow.position.set(0, DECK_Y + 2.4, -70);
 ship.add(goldGlow);
 
-/* ---------- arama projektorleri ---------- */
 const spots = [];
 function addSpot(x, z) {
  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 9, 8), steelRust);
@@ -283,16 +288,13 @@ function addSpot(x, z) {
 }
 addSpot(-15.5, -16); addSpot(15.5, -16); addSpot(-15.5, 16); addSpot(15.5, 16);
 
-/* ---------- kopuk izi ---------- */
 const WAKE = 260;
 const wakeGeo = new THREE.BufferGeometry();
 const wakePos = new Float32Array(WAKE * 3);
-const wakeAlpha = new Float32Array(WAKE);
 for (let i = 0; i < WAKE; i++) {
  wakePos[i * 3] = rnd(-DECK_W / 2, DECK_W / 2);
  wakePos[i * 3 + 1] = -1.5;
  wakePos[i * 3 + 2] = rnd(DECK_L / 2, DECK_L / 2 + 240);
- wakeAlpha[i] = Math.random();
 }
 wakeGeo.setAttribute('position', new THREE.BufferAttribute(wakePos, 3));
 const wakeMat = new THREE.PointsMaterial({
@@ -301,7 +303,6 @@ const wakeMat = new THREE.PointsMaterial({
 const wake = new THREE.Points(wakeGeo, wakeMat);
 scene.add(wake);
 
-/* ---------- martilar ---------- */
 const gulls = [];
 for (let i = 0; i < 7; i++) {
  const g = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2.2, 4),
@@ -311,7 +312,7 @@ for (let i = 0; i < 7; i++) {
  scene.add(g);
  gulls.push({ mesh: g, ang: Math.random() * 6.28, rad: rnd(35, 85), spd: rnd(0.12, 0.28), y: g.position.y });
 }
-/* ---------- ses (WebAudio ile sentez, dis dosya yok) ---------- */
+
 const Audio = (() => {
  let ctx = null, master = null, ambGain = null, engOsc = null, waveNoise = null;
  function init() {
@@ -319,12 +320,10 @@ const Audio = (() => {
  ctx = new (window.AudioContext || window.webkitAudioContext)();
  master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination);
  ambGain = ctx.createGain(); ambGain.gain.value = 0.3; ambGain.connect(master);
- // gemi motoru: alcak frekans ugultu
  engOsc = ctx.createOscillator(); engOsc.type = 'sawtooth'; engOsc.frequency.value = 42;
  const engF = ctx.createBiquadFilter(); engF.type = 'lowpass'; engF.frequency.value = 130;
  const engG = ctx.createGain(); engG.gain.value = 0.22;
  engOsc.connect(engF); engF.connect(engG); engG.connect(ambGain); engOsc.start();
- // okyanus: filtrelenmis pembe gurultu
  waveNoise = noiseSource(0.5); const wf = ctx.createBiquadFilter();
  wf.type = 'bandpass'; wf.frequency.value = 480; wf.Q.value = 0.4;
  const wg = ctx.createGain(); wg.gain.value = 0.5;
@@ -374,11 +373,8 @@ const Audio = (() => {
  hitMetal() { burst('triangle', 900, 0.06, 0.16, 400); },
  reload() { burst('square', 320, 0.05, 0.14); setTimeout(() => burst('square', 210, 0.07, 0.14), 130); },
  swap() { burst('triangle', 520, 0.05, 0.13, 300); },
- hurt() { noiseBurst(0.3, 0.5, 600); burst('sawtooth', 110, 0.25, 0.25, 50); },
  coin() { burst('sine', 980, 0.09, 0.18); setTimeout(() => burst('sine', 1350, 0.1, 0.16), 70); },
- levelUp() { [660, 880, 1180].forEach((f, i) => setTimeout(() => burst('sine', f, 0.18, 0.2), i * 120)); },
  engine(v) { if (engOsc) engOsc.frequency.value = 38 + v * 12; },
- thunder() { noiseBurst(1.5, 0.7, 420); burst('sine', 55, 1.2, 0.3, 22); },
  };
  function gull() {
  if (!ctx || state.night) return;
@@ -396,7 +392,6 @@ const Audio = (() => {
  }
 })();
 
-/* ---------- oyun durumu ---------- */
 const WEAPONS = {
  rifle: { name: 'OTOMATIK TUFEK', dmg: 34, rpm: 620, mag: 30, spread: 0.014, zoom: 58, auto: true, reload: 1.5 },
  sniper: { name: 'KESKIN NISANCI', dmg: 145, rpm: 48, mag: 5, spread: 0.001, zoom: 14, auto: false, reload: 2.2 },
@@ -413,17 +408,90 @@ const state = {
  inTurret: null, shipZ: 0, time: 0, shake: 0, waveH: 1,
 };
 
-/* ---------- oyuncu ---------- */
 const player = {
  pos: new THREE.Vector3(0, DECK_Y + 1.7, -48),
  vel: new THREE.Vector3(), yaw: Math.PI, pitch: 0,
- onGround: true, groundY: DECK_Y + 0.3, crouch: false, bob: 0,
+ onGround: true, groundY: DECK_Y + 0.3,
 };
-const EYE = 1.7, EYE_CROUCH = 1.05, GRAV = 26, JUMP = 8.6;
+const GRAV = 26, JUMP = 8.6;
 
-/* ---------- girdi ---------- */
 const keys = Object.create(null);
-let mouseDown = false, rightDown = false, locked = false;
+let mouseDown = false, locked = false;
+
+// Mobil Dokunmatik Değişkenleri
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+let joystickDir = { x: 0, y: 0 };
+let touchLookId = null, lastTouchX = 0, lastTouchY = 0;
+
+if (isMobile) {
+  $('mobileControls').style.display = 'block';
+  // Joystick Mantığı
+  const joyArea = $('joystickArea');
+  const joyKnob = $('joystickKnob');
+  let joyTouchId = null, joyCenter = { x: 0, y: 0 };
+
+  joyArea.addEventListener('touchstart', (e) => {
+    if (joyTouchId !== null) return;
+    const t = e.changedTouches[0];
+    joyTouchId = t.identifier;
+    const rect = joyArea.getBoundingClientRect();
+    joyCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  });
+
+  window.addEventListener('touchmove', (e) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier === joyTouchId) {
+        const dx = t.clientX - joyCenter.x;
+        const dy = t.clientY - joyCenter.y;
+        const dist = Math.hypot(dx, dy);
+        const maxDist = 45;
+        const angle = Math.atan2(dy, dx);
+        const clampedDist = Math.min(dist, maxDist);
+        joyKnob.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+        joystickDir.x = (Math.cos(angle) * clampedDist) / maxDist;
+        joystickDir.y = (Math.sin(angle) * clampedDist) / maxDist;
+      } else if (t.identifier === touchLookId) {
+        const dx = t.clientX - lastTouchX;
+        const dy = t.clientY - lastTouchY;
+        lastTouchX = t.clientX;
+        lastTouchY = t.clientY;
+        player.yaw -= dx * 0.005;
+        player.pitch = clamp(player.pitch - dy * 0.005, -1.35, 1.35);
+      }
+    }
+  });
+
+  window.addEventListener('touchend', (e) => {
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier === joyTouchId) {
+        joyTouchId = null;
+        joyKnob.style.transform = `translate(0px, 0px)`;
+        joystickDir.x = 0; joystickDir.y = 0;
+      } else if (t.identifier === touchLookId) {
+        touchLookId = null;
+      }
+    }
+  });
+
+  renderer.domElement.addEventListener('touchstart', (e) => {
+    if (!state.running) return;
+    const t = e.changedTouches[0];
+    if (t.clientX > innerWidth / 2 && touchLookId === null) {
+      touchLookId = t.identifier;
+      lastTouchX = t.clientX;
+      lastTouchY = t.clientY;
+    }
+  });
+
+  $('mobShoot').addEventListener('touchstart', () => { mouseDown = true; });
+  $('mobShoot').addEventListener('touchend', () => { mouseDown = false; });
+  $('mobJump').addEventListener('click', () => { if (player.onGround && !state.inTurret) { player.vel.y = JUMP; player.onGround = false; } });
+  $('mobReload').addEventListener('click', () => { startReload(); });
+  $('mobSwap').addEventListener('click', () => { setWeapon(state.weapon === 'rifle' ? 'sniper' : 'rifle'); });
+}
+
 addEventListener('keydown', (e) => {
  keys[e.code] = true;
  if (!state.running) return;
@@ -436,21 +504,21 @@ addEventListener('keydown', (e) => {
  if (e.code === 'Space' && player.onGround && !state.inTurret) {
  player.vel.y = JUMP; player.onGround = false;
  }
- if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
 });
 addEventListener('keyup', (e) => { keys[e.code] = false; });
+
 renderer.domElement.addEventListener('mousedown', (e) => {
  if (!state.running) return;
  if (e.button === 0) mouseDown = true;
- if (e.button === 2) { rightDown = true; setScope(true); }
+ if (e.button === 2) { setScope(true); }
 });
 addEventListener('mouseup', (e) => {
  if (e.button === 0) mouseDown = false;
- if (e.button === 2) { rightDown = false; setScope(false); }
+ if (e.button === 2) { setScope(false); }
 });
 addEventListener('contextmenu', (e) => e.preventDefault());
 addEventListener('mousemove', (e) => {
- if (!locked) return;
+ if (!locked && !isMobile) return;
  const s = state.scoped ? 0.0009 : 0.0023;
  player.yaw -= e.movementX * s;
  player.pitch = clamp(player.pitch - e.movementY * s, -1.35, 1.35);
@@ -459,7 +527,6 @@ document.addEventListener('pointerlockchange', () => {
  locked = document.pointerLockElement === renderer.domElement;
 });
 
-/* ---------- silah / durbun / nvg ---------- */
 function setWeapon(w) {
  if (state.weapon === w || state.reloading > 0) return;
  state.weapon = w; state.scoped = false; applyScope();
@@ -496,7 +563,6 @@ function finishReload() {
  updateHud();
 }
 
-/* ---------- mitralyoz ---------- */
 function toggleTurret() {
  if (state.inTurret) {
  state.inTurret = null; hint('MITRALYOZDEN INDIN'); updateHud(); return;
@@ -510,11 +576,11 @@ function toggleTurret() {
  state.inTurret = best;
  player.pos.set(best.x, DECK_Y + 1.9, best.z + 1.6);
  player.vel.set(0, 0, 0); player.onGround = true;
- hint('MITRALYOZ AKTIF - sinirsiz mermi, isinmaya dikkat');
+ hint('MITRALYOZ AKTIF');
  updateHud();
  } else hint('Yakinda mitralyoz yok');
 }
-/* ---------- korsan botlari ---------- */
+
 const boats = [];
 const boatHullMat = new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.85, metalness: 0.4 });
 const boatTrimMat = new THREE.MeshStandardMaterial({ color: 0x8a2b22, roughness: 0.8, metalness: 0.3 });
@@ -532,7 +598,7 @@ function makeBoat() {
  trim.position.y = 1.55; g.add(trim);
  const cabin = new THREE.Mesh(new THREE.BoxGeometry(2, 1.3, 2.4), boatHullMat);
  cabin.position.set(0, 2.2, 1.4); cabin.castShadow = true; g.add(cabin);
- // korsanlar
+ 
  for (const px of [-0.9, 0.9]) {
  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.9, 4, 8), pirateMat);
  body.position.set(px, 2.35, -1.6); body.castShadow = true; g.add(body);
@@ -542,7 +608,7 @@ function makeBoat() {
  }
  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), muzzleMat.clone());
  flash.position.set(0, 2.6, -2.6); g.add(flash);
- // sirt izi
+ 
  const trailGeo = new THREE.BufferGeometry();
  const tp = new Float32Array(40 * 3);
  for (let i = 0; i < 40; i++) {
@@ -587,7 +653,6 @@ function killBoat(b) {
  updateHud();
 }
 
-/* ---------- patlama parcaciklari ---------- */
 const explosions = [];
 const expMat = new THREE.MeshBasicMaterial({ color: 0xffa33a, transparent: true });
 function makeExplosion(p) {
@@ -605,7 +670,6 @@ function makeExplosion(p) {
  explosions.push({ light: l, life: 0.4 });
 }
 
-/* ---------- carpisma ---------- */
 function groundAt(x, z) {
  let best = DECK_Y + 0.3;
  if (Math.abs(x) > DECK_W / 2 || z < -DECK_L / 2 || z > DECK_L / 2) best = -999;
@@ -619,7 +683,6 @@ function groundAt(x, z) {
 function blocked(x, z, y) {
  if (Math.abs(x) > DECK_W / 2 - 0.9) return true;
  if (z < -DECK_L / 2 + 0.9 || z > DECK_L / 2 - 0.9) return true;
- // koprusto
  if (z > DECK_L / 2 - 17 && Math.abs(x) < 11.5 && y < DECK_Y + 13) return true;
  for (const b of boxes) {
  if (Math.abs(x - b.x) < b.hw + 0.42 && Math.abs(z - b.z) < b.hl + 0.42) {
@@ -629,7 +692,6 @@ function blocked(x, z, y) {
  return false;
 }
 
-/* ---------- ates etme ---------- */
 const ray = new THREE.Raycaster();
 const tmpV = new THREE.Vector3();
 function shoot() {
@@ -648,7 +710,7 @@ function shoot() {
  if (state.reloading > 0 || state.fireCd > 0) return;
  if (state.mag[state.weapon] <= 0) {
  if (state.ammo[state.weapon] > 0) startReload();
- else hint('SARJOR BOS - bolum sonunda mermi al');
+ else hint('SARJOR BOS');
  return;
  }
  state.mag[state.weapon]--;
@@ -686,7 +748,6 @@ function doHitscan(dmg, spread) {
 let crossT = 0;
 function flashCross() { crossT = 0.12; $('cross').classList.add('hit'); }
 
-/* ---------- hava durumu ---------- */
 const WEATHERS = [
  { id: 'sun', name: 'GUNESLI', fog: [60, 950], sky: 0x8fc4e8, sun: 2.1, wave: 1, rain: 0 },
  { id: 'fog', name: 'SISLI', fog: [10, 190], sky: 0xa9b8c2, sun: 0.75, wave: 0.8, rain: 0 },
@@ -727,614 +788,228 @@ function applyWeather() {
  rainPts.visible = w.rain > 0;
  goldGlow.intensity = state.night ? 3.4 : 2.2;
  $('weather').textContent = (state.night ? 'GECE - ' : '') + w.name;
- if (state.night) hint('GECE BOLUMU - N tusu ile gece gorus durbunu');
- else if (state.nvg) toggleNvg();
 }
-/* ---------- bolum akisi ---------- */
+
 function startLevel() {
  const lv = state.level;
  state.spawnLeft = 4 + lv * 2 + Math.floor(lv / 5) * 5;
  state.alive = 0;
- state.spawnGap = Math.max(0.42, 2.1 - lv * 0.11 - Math.floor(lv / 5) * 0.16);
- state.spawnTimer = 1.1;
- state.mag.rifle = Math.min(WEAPONS.rifle.mag, state.mag.rifle);
+ state.spawnGap = Math.max(0.42, 2.1 - lv * 0.11 - Math.floor(lv / 5) * 0.15);
+ state.spawnTimer = 1.5;
  applyWeather();
+ $('lvl').textContent = lv;
  updateHud();
- if (lv % 5 === 1 && lv > 1) hint('ZORLUK SICRAMASI! Korsanlar cok daha agresif');
- else hint('BOLUM ' + lv + ' BASLADI');
-}
-function levelCleared() {
- Audio.levelUp();
- $('shopTitle').textContent = 'BOLUM ' + state.level + ' TEMIZLENDI';
- $('goldBig').textContent = state.gold;
- refreshShop();
- $('shopScreen').classList.add('on');
- state.running = false;
- document.exitPointerLock();
-}
-function refreshShop() {
- $('goldBig').textContent = state.gold;
- $('buyRifle').disabled = state.gold < 45;
- $('buySniper').disabled = state.gold < 60;
- $('buyHeal').disabled = state.gold < 70 || state.hp >= state.maxHp;
-}
-function gameOver() {
- state.over = true; state.running = false;
- $('overText').textContent = 'Bolum ' + state.level + ' de dustun. Toplanan altin: ' + state.gold + '. Korsanlar ambardaki kulceleri ele gecirdi.';
- $('overScreen').classList.add('on');
- document.exitPointerLock();
-}
-function resetGame() {
- for (const b of boats) { b.group.visible = false; boatPool.push(b); }
- boats.length = 0;
- state.level = 1; state.gold = 0; state.hp = state.maxHp;
- state.ammo = { rifle: 120, sniper: 15 };
- state.mag = { rifle: 30, sniper: 5 };
- state.weapon = 'rifle'; state.reloading = 0; state.inTurret = null;
- state.over = false; state.nvg = false;
- $('nvg').classList.remove('on');
- player.pos.set(0, DECK_Y + 1.7, -48);
- player.vel.set(0, 0, 0); player.yaw = Math.PI; player.pitch = 0;
- startLevel();
+ hideAll();
 }
 
-/* ---------- HUD ---------- */
-let hintT = 0;
-function hint(txt) { $('hint').textContent = txt; $('hint').classList.add('on'); hintT = 2.6; }
 function updateHud() {
- $('lvl').textContent = state.level;
  $('gold').textContent = state.gold;
  $('left').textContent = state.spawnLeft + state.alive;
- if (state.inTurret) {
- $('weap').textContent = 'MITRALYOZ';
- $('ammo').textContent = 'ISI ' + Math.round(state.inTurret.heat * 100) + '%';
- $('ammo').classList.toggle('low', state.inTurret.heat > 0.8);
- } else {
- $('weap').textContent = WEAPONS[state.weapon].name;
- $('ammo').textContent = state.mag[state.weapon] + ' / ' + state.ammo[state.weapon];
- $('ammo').classList.toggle('low', state.mag[state.weapon] === 0);
- }
- $('hpFill').style.width = clamp(state.hp / state.maxHp * 100, 0, 100) + '%';
+ const w = WEAPONS[state.weapon];
+ $('weap').textContent = state.inTurret ? 'MITRALYOZ' : w.name;
+ const am = state.inTurret ? 'SINIRSIZ' : `${state.mag[state.weapon]} / ${state.ammo[state.weapon]}`;
+ $('ammo').textContent = am;
+ $('ammo').classList.toggle('low', !state.inTurret && state.mag[state.weapon] <= w.mag * 0.25);
+ const hpPct = Math.max(0, (state.hp / state.maxHp) * 100);
+ $('hpFill').style.width = hpPct + '%';
 }
 
-/* ---------- butonlar ---------- */
-$('startBtn').onclick = () => {
+function hint(msg) {
+ const h = $('hint');
+ h.textContent = msg;
+ h.classList.add('on');
+ clearTimeout(hint._t);
+ hint._t = setTimeout(() => h.classList.remove('on'), 2500);
+}
+
+function hideAll() {
+ document.querySelectorAll('.overlay').forEach(o => o.classList.remove('on'));
+}
+function showShop() {
+ $('goldBig').textContent = state.gold;
+ $('shopTitle').textContent = `BOLUM ${state.level} TEMIZLENDI`;
+ $('shopScreen').classList.add('on');
+}
+function gameOver(reason) {
+ state.running = false;
+ $('overTitle').textContent = 'GEMI ELE GECIRILDI';
+ $('overText').textContent = reason;
+ $('overScreen').classList.add('on');
+ if (document.pointerLockElement) document.exitPointerLock();
+}
+
+$('startBtn').addEventListener('click', () => {
  Audio.init(); Audio.resume();
- $('startScreen').classList.remove('on');
- renderer.domElement.requestPointerLock();
- state.running = true;
+ state.running = true; state.level = 1; state.gold = 50;
+ state.hp = 100; state.maxHp = 100;
+ state.ammo = { rifle: 120, sniper: 15 };
+ state.mag = { rifle: WEAPONS.rifle.mag, sniper: WEAPONS.sniper.mag };
+ player.pos.set(0, DECK_Y + 1.7, -48);
  startLevel();
-};
-$('nextBtn').onclick = () => {
- $('shopScreen').classList.remove('on');
+ if (!isMobile) renderer.domElement.requestPointerLock();
+});
+
+$('nextBtn').addEventListener('click', () => {
  state.level++;
  startLevel();
- renderer.domElement.requestPointerLock();
- state.running = true;
-};
-$('buyRifle').onclick = () => {
- if (state.gold < 45) return;
- state.gold -= 45; state.ammo.rifle += 90; Audio.coin(); refreshShop(); updateHud();
-};
-$('buySniper').onclick = () => {
- if (state.gold < 60) return;
- state.gold -= 60; state.ammo.sniper += 12; Audio.coin(); refreshShop(); updateHud();
-};
-$('buyHeal').onclick = () => {
- if (state.gold < 70 || state.hp >= state.maxHp) return;
- state.gold -= 70; state.hp = Math.min(state.maxHp, state.hp + 50);
- Audio.coin(); refreshShop(); updateHud();
-};
-$('premiumBtn').onclick = () => alert('Premium silahlar yakinda eklenecek.');
-$('adBtn').onclick = () => alert('Reklam entegrasyonu yakinda eklenecek.');
-$('retryBtn').onclick = () => {
- $('overScreen').classList.remove('on');
- resetGame();
- renderer.domElement.requestPointerLock();
- state.running = true;
-};
+ if (!isMobile) renderer.domElement.requestPointerLock();
+});
 
-addEventListener('resize', () => {
+$('retryBtn').addEventListener('click', () => {
+ state.running = true; state.level = 1; state.gold = 50;
+ state.hp = 100; state.maxHp = 100;
+ state.ammo = { rifle: 120, sniper: 15 };
+ state.mag = { rifle: WEAPONS.rifle.mag, sniper: WEAPONS.sniper.mag };
+ player.pos.set(0, DECK_Y + 1.7, -48);
+ startLevel();
+ if (!isMobile) renderer.domElement.requestPointerLock();
+});
+
+$('buyRifle').addEventListener('click', () => {
+ if (state.gold >= 45) { state.gold -= 45; state.ammo.rifle += 90; Audio.coin(); updateHud(); $('goldBig').textContent = state.gold; }
+ else hint('Yetersiz altin!');
+});
+$('buySniper').addEventListener('click', () => {
+ if (state.gold >= 60) { state.gold -= 60; state.ammo.sniper += 12; Audio.coin(); updateHud(); $('goldBig').textContent = state.gold; }
+ else hint('Yetersiz altin!');
+});
+$('buyHeal').addEventListener('click', () => {
+ if (state.gold >= 70) { state.gold -= 70; state.hp = Math.min(state.maxHp, state.hp + 50); Audio.coin(); updateHud(); $('goldBig').textContent = state.gold; }
+ else hint('Yetersiz altin!');
+});
+
+let lastT = performance.now();
+function loop(now) {
+ requestAnimationFrame(loop);
+ const dt = Math.min(0.1, (now - lastT) * 0.001);
+ lastT = now;
+ 
+ if (!state.running) {
+ renderer.render(scene, camera);
+ return;
+ }
+
+ state.time += dt;
+ if (crossT > 0) { crossT -= dt; if (crossT <= 0) $('cross').classList.remove('hit'); }
+ if (state.fireCd > 0) state.fireCd -= dt;
+ if (state.reloading > 0) {
+ state.reloading -= dt;
+ if (state.reloading <= 0) finishReload();
+ }
+
+ // Hareket Mantığı (PC + Mobil Joystick)
+ if (!state.inTurret) {
+ const speed = (keys['ShiftLeft'] || keys['ShiftRight'] ? 9.2 : 5.8);
+ const moveDir = new THREE.Vector3();
+ const fwd = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+ const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+
+ if (keys['KeyW'] || keys['ArrowUp']) moveDir.add(fwd);
+ if (keys['KeyS'] || keys['ArrowDown']) moveDir.sub(fwd);
+ if (keys['KeyD'] || keys['ArrowRight']) moveDir.add(right);
+ if (keys['KeyA'] || keys['ArrowLeft']) moveDir.sub(right);
+
+ if (isMobile && (joystickDir.x !== 0 || joystickDir.y !== 0)) {
+   moveDir.addScaledVector(fwd, -joystickDir.y);
+   moveDir.addScaledVector(right, joystickDir.x);
+ }
+
+ moveDir.y = 0;
+ if (moveDir.lengthSq() > 0) moveDir.normalize();
+
+ player.pos.x += moveDir.x * speed * dt;
+ player.pos.z += moveDir.z * speed * dt;
+
+ player.groundY = groundAt(player.pos.x, player.pos.z);
+ if (player.pos.y > player.groundY) {
+   player.vel.y -= GRAV * dt;
+   player.pos.y += player.vel.y * dt;
+   if (player.pos.y <= player.groundY) {
+     player.pos.y = player.groundY;
+     player.vel.y = 0;
+     player.onGround = true;
+   }
+ } else {
+   player.pos.y = player.groundY;
+   player.onGround = true;
+ }
+
+ if (blocked(player.pos.x, player.pos.z, player.pos.y)) {
+   player.pos.x -= moveDir.x * speed * dt;
+   player.pos.z -= moveDir.z * speed * dt;
+ }
+ } else {
+   const t = state.inTurret;
+   player.pos.set(t.x, DECK_Y + 1.9, t.z + 1.6);
+   if (t.cool > 0) t.cool -= dt; else t.heat = Math.max(0, t.heat - dt * 0.6);
+ }
+
+ camera.position.copy(player.pos);
+ camera.position.y += (state.inTurret ? 0.4 : 1.7);
+ const lookTarget = new THREE.Vector3(0, 0, -1)
+   .applyAxisAngle(new THREE.Vector3(1, 0, 0), player.pitch)
+   .applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw)
+   .add(camera.position);
+ camera.lookAt(lookTarget);
+
+ if (mouseDown) shoot();
+
+ // Düşman Yönetimi
+ if (state.spawnLeft > 0) {
+   state.spawnTimer -= dt;
+   if (state.spawnTimer <= 0) {
+     spawnBoat();
+     state.spawnLeft--;
+     state.spawnTimer = state.spawnGap;
+   }
+ } else if (state.spawnLeft === 0 && state.alive === 0) {
+   state.running = false;
+   showShop();
+ }
+
+ for (const b of boats) {
+   if (b.dead) {
+     b.deadT -= dt;
+     b.group.position.y -= dt * 3;
+     if (b.deadT <= 0) {
+       b.group.visible = false;
+       boats.splice(boats.indexOf(b), 1);
+       boatPool.push(b);
+     }
+     continue;
+   }
+   const dirToShip = new THREE.Vector3(0, 0, state.shipZ).sub(b.pos);
+   const dist = dirToShip.length();
+   dirToShip.normalize();
+   b.pos.addScaledVector(dirToShip, b.speed * dt);
+   b.group.position.copy(b.pos);
+   b.group.lookAt(0, b.pos.y, state.shipZ);
+
+   if (dist < 22) {
+     state.hp -= dt * 18;
+     updateHud();
+     if (state.hp <= 0) gameOver('Gemi düşmanlar tarafından ele geçirildi!');
+   }
+ }
+
+ for (let i = explosions.length - 1; i >= 0; i--) {
+   const e = explosions[i];
+   e.life -= dt;
+   if (e.life <= 0) {
+     scene.remove(e.group || e.light);
+     explosions.splice(i, 1);
+   }
+ }
+
+ renderer.render(scene, camera);
+}
+requestAnimationFrame(loop);
+
+window.addEventListener('resize', () => {
  camera.aspect = innerWidth / innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth, innerHeight);
 });
-
-/* ---------- ana dongu ---------- */
-const clock = new THREE.Clock();
-const SHIP_SPEED = 9;
-const fwd = new THREE.Vector3(), right = new THREE.Vector3();
-
-function update(dt) {
- state.time += dt;
- state.shipZ -= SHIP_SPEED * dt;
-
- /* --- okyanus dalgalari --- */
- const pos = oceanGeo.attributes.position;
- const t = state.time;
- const amp = state.waveH;
- for (let i = 0; i < pos.count; i++) {
- const x = oceanBase[i * 3], z = oceanBase[i * 3 + 2];
- const wz = z + state.shipZ;
- pos.array[i * 3 + 1] =
- Math.sin(x * 0.018 + t * 1.1) * 0.9 * amp +
- Math.sin(wz * 0.024 - t * 1.5) * 1.1 * amp +
- Math.sin((x + wz) * 0.045 + t * 2.2) * 0.35 * amp;
- }
- pos.needsUpdate = true;
- oceanGeo.computeVertexNormals();
-
- /* --- gemi salinimi --- */
- ship.rotation.z = Math.sin(t * 0.55) * 0.012 * amp;
- ship.rotation.x = Math.sin(t * 0.42 + 1) * 0.008 * amp;
- ship.position.y = Math.sin(t * 0.5) * 0.35 * amp;
- Audio.engine(amp * 0.5);
-
- /* --- kopuk izi --- */
- const wp = wakeGeo.attributes.position;
- for (let i = 0; i < WAKE; i++) {
- wp.array[i * 3 + 2] -= 34 * dt;
- wp.array[i * 3 + 1] = -1.4 + Math.sin(t * 4 + i) * 0.5;
- if (wp.array[i * 3 + 2] < DECK_L / 2) {
- wp.array[i * 3 + 2] = DECK_L / 2 + 240;
- wp.array[i * 3] = rnd(-DECK_W / 2 - 3, DECK_W / 2 + 3);
- }
- }
- wp.needsUpdate = true;
- wakeMat.opacity = state.night ? 0.25 : 0.55;
-
- /* --- martilar --- */
- for (const g of gulls) {
- g.ang += g.spd * dt;
- g.mesh.position.set(Math.cos(g.ang) * g.rad, g.y + Math.sin(t * 1.4 + g.ang) * 2.5, Math.sin(g.ang) * g.rad);
- g.mesh.rotation.y = -g.ang;
- g.mesh.visible = !state.night && state.weather !== 'storm';
- }
-
- /* --- yagmur --- */
- if (rainPts.visible) {
- const rp = rainPts.geometry.attributes.position;
- const fall = state.weather === 'storm' ? 130 : 80;
- for (let i = 0; i < rp.count; i++) {
- rp.array[i * 3 + 1] -= fall * dt;
- if (rp.array[i * 3 + 1] < -3) {
- rp.array[i * 3 + 1] = 90;
- rp.array[i * 3] = player.pos.x + rnd(-70, 70);
- rp.array[i * 3 + 2] = player.pos.z + rnd(-80, 80);
- }
- }
- rp.needsUpdate = true;
- if (state.weather === 'storm' && Math.random() < dt * 0.14) {
- hemi.intensity = 2.6; Audio.thunder();
- setTimeout(() => { hemi.intensity = state.night ? 0.08 : 0.75; }, 130);
- }
- }
-
- if (!state.running) return;
-
- /* --- oyuncu hareketi --- */
- fwd.set(Math.sin(player.yaw), 0, Math.cos(player.yaw));
- right.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
- let mx = 0, mz = 0;
- if (!state.inTurret) {
- if (keys.KeyW) mz += 1;
- if (keys.KeyS) mz -= 1;
- if (keys.KeyA) mx -= 1;
- if (keys.KeyD) mx += 1;
- }
- player.crouch = !!keys.ControlLeft || !!keys.ControlRight;
- const sprint = keys.ShiftLeft && !player.crouch && !state.scoped;
- const spd = (player.crouch ? 3.1 : sprint ? 10.5 : 6.4) * (state.scoped ? 0.5 : 1);
- const len = Math.hypot(mx, mz) || 1;
- const wishX = (right.x * mx + fwd.x * mz) / len * spd;
- const wishZ = (right.z * mx + fwd.z * mz) / len * spd;
-
- const nx = player.pos.x + wishX * dt;
- const nz = player.pos.z + wishZ * dt;
- if (!blocked(nx, player.pos.z, player.pos.y)) player.pos.x = nx;
- if (!blocked(player.pos.x, nz, player.pos.y)) player.pos.z = nz;
-
- player.vel.y -= GRAV * dt;
- player.pos.y += player.vel.y * dt;
- const eye = player.crouch ? EYE_CROUCH : EYE;
- const gy = groundAt(player.pos.x, player.pos.z);
- if (gy < -900) {
- // denize dustu
- state.hp = 0;
- } else if (player.pos.y - eye <= gy) {
- player.pos.y = gy + eye;
- player.vel.y = 0;
- player.onGround = true;
- player.groundY = gy;
- } else player.onGround = false;
-
- if (state.hp <= 0 && !state.over) { gameOver(); return; }
-
- // yurume sallanmasi
- const moving = (mx || mz) && player.onGround;
- player.bob += dt * (sprint ? 14 : 9) * (moving ? 1 : 0);
- const bobY = moving ? Math.sin(player.bob) * (sprint ? 0.075 : 0.045) : 0;
- const bobX = moving ? Math.cos(player.bob * 0.5) * 0.03 : 0;
-
- /* --- kamera --- */
- camera.position.set(
- player.pos.x + bobX + ship.position.x,
- player.pos.y + bobY + ship.position.y,
- player.pos.z
- );
- if (state.shake > 0) {
- state.shake = Math.max(0, state.shake - dt * 1.9);
- const s = state.shake * 0.14;
- camera.position.x += rnd(-s, s);
- camera.position.y += rnd(-s, s);
- }
- let aimYaw = player.yaw, aimPitch = player.pitch;
- camera.rotation.set(0, 0, 0);
- camera.rotateY(aimYaw + Math.PI);
- camera.rotateX(aimPitch);
- camera.rotation.z = ship.rotation.z * 0.8;
-
- // fov gecisi
- const wpn = WEAPONS[state.weapon];
- const fovTarget = state.inTurret ? 68
- : state.scoped ? (state.weapon === 'sniper' ? wpn.zoom : 54) : 75;
- if (Math.abs(camera.fov - fovTarget) > 0.2) {
- camera.fov += (fovTarget - camera.fov) * Math.min(1, dt * 12);
- camera.updateProjectionMatrix();
- }
-
- /* --- mitralyoz --- */
- if (state.inTurret) {
- const tr = state.inTurret;
- tr.yaw.rotation.y = player.yaw + Math.PI;
- tr.yaw.children.forEach((c) => { if (c.geometry?.type === 'CylinderGeometry') c.rotation.x = Math.PI / 2 - player.pitch; });
- tr.cool -= dt;
- if (tr.cool <= 0) tr.heat = Math.max(0, tr.heat - dt * 0.28);
- }
- for (const tr of turrets) if (tr !== state.inTurret) {
- tr.cool -= dt;
- if (tr.cool <= 0) tr.heat = Math.max(0, tr.heat - dt * 0.35);
- }
-
- /* --- silah zamanlayicilari --- */
- if (state.fireCd > 0) state.fireCd -= dt;
- if (state.reloading > 0) {
- state.reloading -= dt;
- if (state.reloading <= 0) { state.reloading = 0; finishReload(); }
- }
- if (mouseDown) {
- if (state.inTurret || WEAPONS[state.weapon].auto) shoot();
- }
- if (crossT > 0) { crossT -= dt; if (crossT <= 0) $('cross').classList.remove('hit'); }
- if (hintT > 0) { hintT -= dt; if (hintT <= 0) $('hint').classList.remove('on'); }
-
- /* --- bot dogurma --- */
- if (state.spawnLeft > 0) {
- state.spawnTimer -= dt;
- if (state.spawnTimer <= 0) {
- state.spawnTimer = state.spawnGap * rnd(0.7, 1.3);
- spawnBoat();
- state.spawnLeft--;
- updateHud();
- }
- } else if (state.alive === 0) {
- levelCleared();
- return;
- }
-
- /* --- botlar --- */
- let anyDetected = false;
- for (let i = boats.length - 1; i >= 0; i--) {
- const b = boats[i];
- if (b.dead) {
- b.deadT -= dt;
- b.group.position.y -= dt * 2.2;
- b.group.rotation.z += dt * 1.4;
- if (b.deadT <= 0) {
- b.group.visible = false;
- b.group.rotation.set(0, 0, 0);
- boatPool.push(b);
- boats.splice(i, 1);
- }
- continue;
- }
- // gemiye dogru yaklas
- const tx = 0, tz = state.shipZ;
- const dx = tx - b.pos.x, dz = tz - b.pos.z;
- const dist = Math.hypot(dx, dz);
- const desired = 30;
- if (dist > desired) {
- b.pos.x += dx / dist * b.speed * dt;
- b.pos.z += dz / dist * b.speed * dt;
- } else {
- // gemiyi cevrele
- const ang = Math.atan2(dx, dz) + Math.PI / 2;
- b.pos.x += Math.sin(ang) * b.speed * 0.5 * dt;
- b.pos.z += Math.cos(ang) * b.speed * 0.5 * dt;
- }
- b.pos.y = Math.sin(state.time * 1.7 + i) * 0.7 * state.waveH;
- b.group.position.copy(b.pos);
- b.group.rotation.y = Math.atan2(dx, dz);
- b.group.rotation.z = Math.sin(state.time * 2.1 + i) * 0.09 * state.waveH;
-
- if (dist < 170) { b.detected = true; anyDetected = true; }
-
- // ates
- b.fireCd -= dt;
- if (b.fireCd <= 0 && dist < 95) {
- b.fireCd = Math.max(0.55, rnd(1.7, 3.4) - state.level * 0.055);
- b.flashT = 0.07;
- const dmg = (3.2 + state.level * 0.38) * (state.weather === 'fog' || state.night ? 0.65 : 1);
- // konteyner arkasindaysa hasar dus
- const covered = isCovered(b);
- state.hp -= covered ? dmg * 0.18 : dmg;
- if (!covered) {
- Audio.hurt();
- $('flash').style.opacity = '0.34';
- setTimeout(() => { $('flash').style.opacity = '0'; }, 120);
- }
- updateHud();
- if (state.hp <= 0) { gameOver(); return; }
- }
- if (b.flashT > 0) {
- b.flashT -= dt;
- b.flash.material.opacity = Math.max(0, b.flashT / 0.07);
- }
- const trailOp = 0.5 * clamp(b.speed / 18, 0.3, 1);
- b.trail.material.opacity = state.night ? trailOp * 0.5 : trailOp;
- }
-
- /* --- gece projektorleri --- */
- for (const s of spots) {
- const active = state.night && anyDetected;
- s.light.intensity += ((active ? 260 : 0) - s.light.intensity) * Math.min(1, dt * 3);
- if (active) {
- s.ang += dt * 0.75;
- s.target.position.set(s.x + Math.sin(s.ang) * 150, -2, s.z + Math.cos(s.ang) * 150);
- s.head.rotation.y = -s.ang;
- }
- }
-
- /* --- patlamalar --- */
- for (let i = explosions.length - 1; i >= 0; i--) {
- const e = explosions[i];
- e.life -= dt;
- if (e.group) {
- for (const m of e.group.children) {
- m.position.addScaledVector(m.userData.v, dt);
- m.userData.v.y -= 22 * dt;
- m.material.opacity = clamp(e.life / 1.1, 0, 1);
- m.scale.multiplyScalar(1 + dt * 0.9);
- }
- }
- if (e.light) e.light.intensity = Math.max(0, e.life / 0.4) * 30;
- if (e.life <= 0) {
- if (e.group) { scene.remove(e.group); e.group.children.forEach((m) => { m.geometry.dispose(); m.material.dispose(); }); }
- if (e.light) scene.remove(e.light);
- explosions.splice(i, 1);
- }
- }
-
- /* --- altin parlamasi --- */
- goldGroup.children.forEach((m, i) => {
- m.position.y = 0.35 + Math.floor(i / 5) * 0.72 + Math.sin(state.time * 2 + i) * 0.02;
- });
-}
-
-function isCovered(b) {
- // oyuncu ile bot arasinda konteyner var mi
- const px = player.pos.x, pz = player.pos.z;
- const dx = b.pos.x - px, dz = b.pos.z - pz;
- const d = Math.hypot(dx, dz) || 1;
- const steps = 8;
- for (let s = 1; s <= steps; s++) {
- const cx = px + dx / d * s * 2.6;
- const cz = pz + dz / d * s * 2.6;
- for (const bx of boxes) {
- if (Math.abs(cx - bx.x) < bx.hw && Math.abs(cz - bx.z) < bx.hl) {
- if (player.pos.y < bx.top + 0.2) return true;
- }
- }
- }
- return false;
-}
-
-function loop() {
- requestAnimationFrame(loop);
- const dt = Math.min(clock.getDelta(), 0.05);
- update(dt);
- renderer.render(scene, camera);
-}
-/* ================== DUZELTME + MOBIL DOKUNMATIK KONTROLLER ================== */
-player.pos.set(0, DECK_Y + 1.7, -48);
-goldGroup.position.z = -52;
-goldGlow.position.z = -52;
-{
- const _reset = resetGame;
- resetGame = function () { _reset(); player.pos.set(0, DECK_Y + 1.7, -48); };
-}
-
-const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-
-function bindKey(code, fn) {
- let manual = false;
- Object.defineProperty(keys, code, {
- configurable: true,
- get: () => manual || fn(),
- set: (v) => { manual = !!v; },
- });
-}
-
-if (isTouch) {
- renderer.domElement.requestPointerLock = () => {};
- document.exitPointerLock = () => {};
- renderer.setPixelRatio(1);
- renderer.shadowMap.enabled = false;
- sun.castShadow = false;
-
- const css = document.createElement('style');
- css.textContent =
- '#mob{position:fixed;inset:0;z-index:4;pointer-events:none;user-select:none;-webkit-user-select:none}' +
- '#stick{position:absolute;left:20px;bottom:20px;width:132px;height:132px;border-radius:50%;' +
- 'background:rgba(8,26,42,.42);border:2px solid rgba(140,200,255,.35);pointer-events:auto;touch-action:none}' +
- '#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;' +
- 'background:rgba(160,215,255,.5);border:2px solid rgba(225,242,255,.8)}' +
- '#mobR{position:absolute;right:16px;bottom:16px;display:grid;grid-template-columns:repeat(3,62px);' +
- 'grid-auto-rows:62px;gap:9px;justify-items:center;align-items:center;pointer-events:none}' +
- '.mbtn{width:60px;height:60px;border-radius:50%;background:rgba(8,26,42,.55);color:#dff0ff;' +
- 'border:2px solid rgba(140,200,255,.45);font:700 10px/1.15 Arial,sans-serif;display:flex;' +
- 'align-items:center;justify-content:center;text-align:center;pointer-events:auto;touch-action:none;' +
- '-webkit-tap-highlight-color:transparent}' +
- '.mbtn.on{background:rgba(255,196,70,.85);color:#04121d;border-color:#ffd45e}' +
- '#btnFire{grid-column:3;grid-row:3;width:86px;height:86px;font-size:13px;' +
- 'background:rgba(196,52,40,.62);border-color:rgba(255,150,130,.75)}' +
- '#rotate{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;' +
- 'background:#04121d;text-align:center;padding:32px;font-size:17px;line-height:1.6;color:#ffd45e}' +
- '#rotate.on{display:flex}';
- document.head.appendChild(css);
-
- const mob = document.createElement('div');
- mob.id = 'mob';
- mob.innerHTML =
- '<div id="stick"><div id="knob"></div></div>' +
- '<div id="mobR">' +
- '<div class="mbtn" id="btnNvg">GECE<br>GORUS</div>' +
- '<div class="mbtn" id="btnTurret">MITRAL<br>YOZ</div>' +
- '<div class="mbtn" id="btnAds">DUR<br>BUN</div>' +
- '<div class="mbtn" id="btnReload">SARJOR</div>' +
- '<div class="mbtn" id="btnSwap">SILAH</div>' +
- '<div class="mbtn" id="btnJump">ZIPLA</div>' +
- '<div class="mbtn" id="btnCrouch">EGIL</div>' +
- '<div class="mbtn" id="btnFire">ATES</div>' +
- '</div>';
- document.body.appendChild(mob);
-
- const rot = document.createElement('div');
- rot.id = 'rotate';
- rot.innerHTML = 'Telefonu yatay cevir<br><span style="font-size:14px;opacity:.75">Kargo gemisi savunmasi yatay modda oynanir</span>';
- document.body.appendChild(rot);
- const checkRot = () => rot.classList.toggle('on', innerHeight > innerWidth);
- addEventListener('resize', checkRot);
- addEventListener('orientationchange', () => setTimeout(checkRot, 250));
- checkRot();
-
- /* ---- sol joystick ---- */
- const axis = { x: 0, y: 0, mag: 0 };
- const stick = $('stick'), knob = $('knob');
- const R = 50;
- let stickId = null, cx = 0, cy = 0;
- stick.addEventListener('pointerdown', (e) => {
- stickId = e.pointerId;
- const r = stick.getBoundingClientRect();
- cx = r.left + r.width / 2; cy = r.top + r.height / 2;
- stick.setPointerCapture(e.pointerId);
- moveStick(e);
- e.preventDefault();
- });
- stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) moveStick(e); });
- const endStick = (e) => {
- if (e.pointerId !== stickId) return;
- stickId = null; axis.x = axis.y = axis.mag = 0;
- knob.style.transform = 'translate(0,0)';
- };
- stick.addEventListener('pointerup', endStick);
- stick.addEventListener('pointercancel', endStick);
- function moveStick(e) {
- let dx = e.clientX - cx, dy = e.clientY - cy;
- const d = Math.hypot(dx, dy) || 1;
- const k = Math.min(1, R / d);
- const vx = dx * k, vy = dy * k;
- knob.style.transform = 'translate(' + vx + 'px,' + vy + 'px)';
- axis.x = vx / R; axis.y = -vy / R;
- axis.mag = Math.min(1, d / R);
- }
-
- bindKey('KeyW', () => axis.y > 0.28);
- bindKey('KeyS', () => axis.y < -0.28);
- bindKey('KeyD', () => axis.x > 0.28);
- bindKey('KeyA', () => axis.x < -0.28);
- bindKey('ShiftLeft', () => axis.mag > 0.86);
-
- /* ---- sag taraf: bakis surukleme ---- */
- const cv = renderer.domElement;
- cv.style.touchAction = 'none';
- let lookId = null, lx = 0, ly = 0;
- cv.addEventListener('pointerdown', (e) => {
- if (lookId !== null) return;
- lookId = e.pointerId; lx = e.clientX; ly = e.clientY;
- cv.setPointerCapture(e.pointerId);
- });
- cv.addEventListener('pointermove', (e) => {
- if (e.pointerId !== lookId) return;
- const s = state.scoped ? 0.0021 : 0.0052;
- player.yaw -= (e.clientX - lx) * s;
- player.pitch = clamp(player.pitch - (e.clientY - ly) * s, -1.35, 1.35);
- lx = e.clientX; ly = e.clientY;
- });
- const endLook = (e) => { if (e.pointerId === lookId) lookId = null; };
- cv.addEventListener('pointerup', endLook);
- cv.addEventListener('pointercancel', endLook);
-
- /* ---- butonlar ---- */
- const tap = (id, down, up) => {
- const el = $(id);
- el.addEventListener('pointerdown', (e) => { el.classList.add('on'); down && down(); e.preventDefault(); });
- const off = () => { el.classList.remove('on'); up && up(); };
- el.addEventListener('pointerup', off);
- el.addEventListener('pointercancel', off);
- el.addEventListener('pointerleave', off);
- };
- tap('btnFire', () => { mouseDown = true; shoot(); }, () => { mouseDown = false; });
- tap('btnJump', () => {
- if (player.onGround && !state.inTurret) { player.vel.y = JUMP; player.onGround = false; }
- });
- tap('btnReload', () => startReload());
- tap('btnSwap', () => setWeapon(state.weapon === 'rifle' ? 'sniper' : 'rifle'));
- tap('btnTurret', () => toggleTurret());
- tap('btnNvg', () => toggleNvg());
-
- let adsOn = false;
- $('btnAds').addEventListener('pointerdown', (e) => {
- adsOn = !adsOn; setScope(adsOn);
- $('btnAds').classList.toggle('on', adsOn);
- e.preventDefault();
- });
- let crouchOn = false;
- $('btnCrouch').addEventListener('pointerdown', (e) => {
- crouchOn = !crouchOn; keys.ControlLeft = crouchOn;
- $('btnCrouch').classList.toggle('on', crouchOn);
- e.preventDefault();
- });
-
- /* ---- tam ekran + yatay kilit ---- */
- const goFull = () => {
- const el = document.documentElement;
- const rf = el.requestFullscreen || el.webkitRequestFullscreen;
- if (rf) { try { rf.call(el); } catch (_) {} }
- if (screen.orientation && screen.orientation.lock) {
- screen.orientation.lock('landscape').catch(() => {});
- }
- };
- $('startBtn').addEventListener('click', goFull);
- $('retryBtn').addEventListener('click', goFull);
-
- /* ---- masaustu tus listesini gizle, dokunmatik yardim yaz ---- */
- const keysBox = document.querySelector('#startScreen .keys');
- if (keysBox) {
- keysBox.innerHTML =
- '<b>Sol joystick</b><span>Hareket (sonuna kadar it = kosma)</span>' +
- '<b>Sag ekran</b><span>Parmakla surukleyerek nisan al</span>' +
- '<b>ATES</b><span>Basili tut = otomatik ates</span>' +
- '<b>DURBUN</b><span>Nisangah / keskin nisanci durbunu</span>' +
- '<b>SILAH</b><span>Tufek ve keskin nisanci arasi gecis</span>' +
- '<b>ZIPLA / EGIL</b><span>Konteynere cik, siper al</span>' +
- '<b>SARJOR</b><span>Sarjor degistir</span>' +
- '<b>MITRALYOZ</b><span>Yakindaki mevziye bin / in</span>' +
- '<b>GECE GORUS</b><span>Gece bolumlerinde gece gorus modu</span>';
- }
-}
-updateHud();
-loop();
 </script>
 </body>
 </html>
