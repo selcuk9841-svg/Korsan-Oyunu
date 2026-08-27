@@ -171,13 +171,37 @@ hull.position.y = DECK_Y - 7.2;
 hull.castShadow = hull.receiveShadow = true;
 ship.add(hull);
 
-const bow = new THREE.Mesh(new THREE.ConeGeometry(DECK_W / 2 + 1.5, 26, 4), steelDark);
+/* pruva (gemi burnu): govde genisliginden one dogru daralan ucgen prizma */
+const HULL_W = DECK_W + 3, HULL_H = 14, BOW_LEN = 20;
+const bowShape = new THREE.Shape();
+bowShape.moveTo(-HULL_W / 2, 0);
+bowShape.lineTo(HULL_W / 2, 0);
+bowShape.lineTo(0, BOW_LEN);
+bowShape.lineTo(-HULL_W / 2, 0);
+const bow = new THREE.Mesh(
+ new THREE.ExtrudeGeometry(bowShape, { depth: HULL_H, bevelEnabled: false }),
+ steelDark
+);
 bow.rotation.x = -Math.PI / 2;
-bow.rotation.y = Math.PI / 4;
-bow.position.set(0, DECK_Y - 7.2, -(DECK_L / 2 + 12));
-bow.scale.set(1, 1, 0.55);
+bow.position.set(0, DECK_Y - HULL_H - 0.2, -(DECK_L / 2 + 3));
+bow.castShadow = bow.receiveShadow = true;
 ship.add(bow);
 
+/* pruva ustu kapak: guverte seviyesinde ucgen ust yuzey */
+const bowDeck = new THREE.Mesh(
+ new THREE.ExtrudeGeometry(bowShape, { depth: 0.6, bevelEnabled: false }),
+ deckMat
+);
+bowDeck.rotation.x = -Math.PI / 2;
+bowDeck.position.set(0, DECK_Y - 0.6, -(DECK_L / 2 + 3));
+bowDeck.receiveShadow = true;
+ship.add(bowDeck);
+
+/* kic (arka) tabla: govdenin arkasini duz kapatir */
+const stern = new THREE.Mesh(new THREE.BoxGeometry(HULL_W, HULL_H, 2), steelRust);
+stern.position.set(0, DECK_Y - HULL_H / 2 - 0.2, DECK_L / 2 + 3.5);
+stern.castShadow = stern.receiveShadow = true;
+ship.add(stern);
 const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK_W, 0.6, DECK_L), deckMat);
 deck.position.y = DECK_Y;
 deck.receiveShadow = true;
