@@ -742,9 +742,10 @@ const boatPool = [];
 function spawnBoat() {
  const lv = state.level;
  const hpBase = 100 + lv * 22 + Math.floor(lv / 5) * 60;
- const spd = 7.5 + lv * 0.55 + Math.floor(lv / 5) * 1.9;
+ // korsan botu gemiden HIZLI olmali, yoksa asla yetisemez (gemi hizi = SHIP_SPEED)
+ const spd = 15 + lv * 0.7 + Math.floor(lv / 5) * 2.2;
  const ang = Math.random() * Math.PI * 2;
- const dist = rnd(240, 340);
+ const dist = rnd(150, 230);
  const parts = boatPool.pop() || makeBoat();
  parts.group.visible = true;
  const b = {
