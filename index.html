@@ -1238,6 +1238,32 @@ function update(dt) {
  b.trail.material.opacity = state.night ? trailOp * 0.5 : trailOp;
  }
 
+ /* --- dost NPC muhafizlar: koksu korur, en yakin bota ates eder --- */
+ for (const a of allies) {
+ let near = null, nd = 1e9;
+ for (const b of boats) {
+ if (b.dead) continue;
+ const d = Math.hypot(b.pos.x - a.x, b.pos.z - (a.z + state.shipZ));
+ if (d < nd) { nd = d; near = b; }
+ }
+ if (near && nd < 130) {
+ const ax = near.pos.x - a.x;
+ const az = near.pos.z - (a.z + state.shipZ);
+ a.group.rotation.y = Math.atan2(ax, az) + Math.PI;
+ a.fireCd -= dt;
+ if (a.fireCd <= 0) {
+ a.fireCd = rnd(0.55, 1.15);
+ a.flashT = 0.06;
+ near.hp -= 16;
+ Audio.hitMetal();
+ if (near.hp <= 0) killBoat(near);
+ }
+ }
+ if (a.flashT > 0) {
+ a.flashT -= dt;
+ a.flash.material.opacity = Math.max(0, a.flashT / 0.06);
+ }
+ }
  /* --- gece projektorleri --- */
  for (const s of spots) {
  const active = state.night && anyDetected;
