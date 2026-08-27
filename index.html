@@ -217,6 +217,94 @@ for (const [x, z, stack] of layout) {
 // rampa: oyuncu tirmanabilsin
 addContainer(-4.5, DECK_Y + 0.3, -56, 6, 1.6, 8);
 addContainer(-4.5, DECK_Y + 1.9, -50, 6, 1.6, 8);
+ /* ---------- kaptan koksu: merdivenle cikilan, 360 derece camli oda ---------- */
+const BR_Z = DECK_L / 2 - 9;
+const BR_HW = 10, BR_HL = 7;
+const BR_FLOOR = DECK_Y + 8;
+const BR_TOP = BR_FLOOR + 5.4;
+
+const glassMat = new THREE.MeshStandardMaterial({
+ color: 0x8fd4e8, roughness: 0.06, metalness: 0.25,
+ transparent: true, opacity: 0.28, side: THREE.DoubleSide
+});
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x2a343d, roughness: 0.6, metalness: 0.7 });
+
+const brBase = new THREE.Mesh(new THREE.BoxGeometry(BR_HW * 2 + 1, 8, BR_HL * 2 + 1), steelDark);
+brBase.position.set(0, DECK_Y + 4, BR_Z);
+brBase.castShadow = brBase.receiveShadow = true;
+ship.add(brBase);
+
+const brFloor = new THREE.Mesh(new THREE.BoxGeometry(BR_HW * 2, 0.4, BR_HL * 2), deckMat);
+brFloor.position.set(0, BR_FLOOR, BR_Z);
+brFloor.receiveShadow = true;
+ship.add(brFloor);
+
+const brRoof = new THREE.Mesh(new THREE.BoxGeometry(BR_HW * 2 + 1.2, 0.5, BR_HL * 2 + 1.2), steelDark);
+brRoof.position.set(0, BR_TOP, BR_Z);
+brRoof.castShadow = brRoof.receiveShadow = true;
+ship.add(brRoof);
+
+for (const cx of [-1, 1]) for (const cz of [-1, 1]) {
+ const p = new THREE.Mesh(new THREE.BoxGeometry(0.55, 5.4, 0.55), frameMat);
+ p.position.set(cx * BR_HW, BR_FLOOR + 2.7, BR_Z + cz * BR_HL);
+ p.castShadow = true;
+ ship.add(p);
+}
+
+function brGlass(w, h, x, y, z, rotY) {
+ const g = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat);
+ g.position.set(x, y, z);
+ g.rotation.y = rotY;
+ ship.add(g);
+ const par = new THREE.Mesh(new THREE.BoxGeometry(w, 1.1, 0.3), frameMat);
+ par.position.set(x, BR_FLOOR + 0.75, z);
+ par.rotation.y = rotY;
+ par.castShadow = true;
+ ship.add(par);
+}
+const GY = BR_FLOOR + 3.3, GH = 3.6;
+brGlass(BR_HW * 2, GH, 0, GY, BR_Z + BR_HL, 0);
+brGlass(BR_HL * 2, GH, -BR_HW, GY, BR_Z, Math.PI / 2);
+brGlass(BR_HL * 2, GH, BR_HW, GY, BR_Z, Math.PI / 2);
+for (const sx of [-1, 1]) {
+ const w = BR_HW - 2.75;
+ brGlass(w, GH, sx * (BR_HW - w / 2), GY, BR_Z - BR_HL, 0);
+}
+const brDoorTop = new THREE.Mesh(new THREE.BoxGeometry(5.5, 0.4, 0.4), frameMat);
+brDoorTop.position.set(0, BR_FLOOR + 3.2, BR_Z - BR_HL);
+ship.add(brDoorTop);
+
+boxes.push({ x: 0, z: BR_Z, hw: BR_HW + 0.5, hl: BR_HL + 0.5, top: BR_FLOOR, bottom: DECK_Y });
+boxes.push({ x: 0, z: BR_Z + BR_HL, hw: BR_HW + 0.3, hl: 0.3, top: BR_TOP, bottom: BR_FLOOR });
+boxes.push({ x: -BR_HW, z: BR_Z, hw: 0.3, hl: BR_HL + 0.3, top: BR_TOP, bottom: BR_FLOOR });
+boxes.push({ x: BR_HW, z: BR_Z, hw: 0.3, hl: BR_HL + 0.3, top: BR_TOP, bottom: BR_FLOOR });
+for (const sx of [-1, 1]) {
+ const w = BR_HW - 2.75;
+ boxes.push({ x: sx * (BR_HW - w / 2), z: BR_Z - BR_HL, hw: w / 2, hl: 0.3, top: BR_TOP, bottom: BR_FLOOR });
+}
+
+const stairMat = new THREE.MeshStandardMaterial({ color: 0x53616d, roughness: 0.85, metalness: 0.5 });
+const STAIR_N = 8, STAIR_RISE = (BR_FLOOR - DECK_Y - 0.3) / STAIR_N, STAIR_RUN = 1.35;
+for (let i = 0; i < STAIR_N; i++) {
+ const top = DECK_Y + 0.3 + (i + 1) * STAIR_RISE;
+ const h = top - DECK_Y;
+ const z = BR_Z - BR_HL - 0.7 - (STAIR_N - 1 - i) * STAIR_RUN;
+ const st = new THREE.Mesh(new THREE.BoxGeometry(5, h, STAIR_RUN), stairMat);
+ st.position.set(0, DECK_Y + h / 2, z);
+ st.castShadow = st.receiveShadow = true;
+ ship.add(st);
+ boxes.push({ x: 0, z, hw: 2.5, hl: STAIR_RUN / 2, top, bottom: DECK_Y });
+ for (const sx of [-1, 1]) {
+ const r = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.1, STAIR_RUN), frameMat);
+ r.position.set(sx * 2.4, top + 0.55, z);
+ ship.add(r);
+ }
+}
+
+const funnel = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.9, 9, 12), steelRust);
+funnel.position.set(0, BR_TOP + 4.5, DECK_L / 2 - 4);
+funnel.castShadow = true;
+ship.add(funnel);
 
 /* ---------- mitralyoz mevzileri ---------- */
 const turrets = [];
