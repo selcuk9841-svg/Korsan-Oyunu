@@ -777,8 +777,9 @@ function groundAt(x, z) {
 function blocked(x, z, y) {
  if (Math.abs(x) > DECK_W / 2 - 0.9) return true;
  if (z < -DECK_L / 2 + 0.9 || z > DECK_L / 2 - 0.9) return true;
- // koprusto
- if (z > DECK_L / 2 - 17 && Math.abs(x) < 11.5 && y < DECK_Y + 13) return true;
+  // kaide bloku: oda tabani altinda ici dolu
+ if (Math.abs(z - BR_Z) < BR_HL + 0.6 && Math.abs(x) < BR_HW + 0.6 && y < BR_FLOOR - 0.4) return true;
+
  for (const b of boxes) {
  if (Math.abs(x - b.x) < b.hw + 0.42 && Math.abs(z - b.z) < b.hl + 0.42) {
  if (y > b.bottom - 0.1 && y < b.top - 0.35) return true;
