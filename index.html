@@ -349,19 +349,6 @@ for (let i = 0; i < STAIR_N; i++) {
  ship.add(r);
  }
 }
-/* ---------- ambardaki kulce altinlar: koskun icinde ---------- */
-const goldGroup = new THREE.Group();
-const goldMat = new THREE.MeshStandardMaterial({ color: 0xffc63a, roughness: 0.28, metalness: 1 });
-for (let i = 0; i < 14; i++) {
- const b = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 0.9), goldMat);
- b.position.set((i % 4) * 1.7 - 2.6, Math.floor(i / 4) * 0.75, (i % 3) * 1.1 - 1.1);
- b.castShadow = true; goldGroup.add(b);
-}
-goldGroup.position.set(0, BR_FLOOR + 0.2, BR_Z + 2.5);
-ship.add(goldGroup);
-const goldGlow = new THREE.PointLight(0xffc63a, 2.2, 22);
-goldGlow.position.set(0, BR_FLOOR + 2.2, BR_Z + 2.5);
-ship.add(goldGlow);
 const funnel = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.9, 9, 12), steelRust);
 funnel.position.set(0, BR_TOP + 4.5, DECK_L / 2 - 4);
 funnel.castShadow = true;
