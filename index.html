@@ -966,11 +966,8 @@ function update(dt) {
  camera.position.x += rnd(-s, s);
  camera.position.y += rnd(-s, s);
  }
- camera.rotation.set(0, 0, 0);
- camera.rotateY(player.yaw + Math.PI);
- camera.rotateX(player.pitch);
- camera.rotation.z = ship.rotation.z * 0.8;
-
+ camera.rotation.order = 'YXZ';
+ camera.rotation.set(player.pitch, player.yaw + Math.PI, 0);
  const wpn = WEAPONS[state.weapon];
  const fovTarget = state.inTurret ? 68
  : state.scoped ? (state.weapon === 'sniper' ? wpn.zoom : 54) : 75;
