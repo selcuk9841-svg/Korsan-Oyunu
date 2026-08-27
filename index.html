@@ -59,7 +59,7 @@
     <!-- Three.js Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // --- SAHNE, KAMİRA VE RENDERER ---
+        // --- SAHNE, KAMERA VE RENDERER ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x050b14);
         scene.fog = new THREE.FogExp2(0x050b14, 0.015);
@@ -82,10 +82,9 @@
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // --- GEMİ VE GÜVERTE (İyileştirilmiş Görseller) ---
+        // --- GEMİ VE GÜVERTE ---
         const shipGroup = new THREE.Group();
 
-        // Gövde
         const hullGeo = new THREE.BoxGeometry(12, 4, 30);
         const hullMat = new THREE.MeshStandardMaterial({ color: 0x3b3a36, roughness: 0.4, metalness: 0.8 });
         const hull = new THREE.Mesh(hullGeo, hullMat);
@@ -94,9 +93,8 @@
         hull.receiveShadow = true;
         shipGroup.add(hull);
 
-        // Güverte
         const deckGeo = new THREE.BoxGeometry(11.5, 0.5, 29);
-        const deckMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.7 }); // Ahşap doku hissi
+        const deckMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.7 });
         const deck = new THREE.Mesh(deckGeo, deckMat);
         deck.position.y = 0.25;
         deck.receiveShadow = true;
@@ -104,19 +102,13 @@
 
         scene.add(shipGroup);
 
-        // --- FARKLI TİPLERDE KONTEYNERLAR (Gezilebilir Düzen) ---
-        const containers = [];
+        // --- KONTEYNERLAR ---
         const containerTypes = [
-            { color: 0xcc2222, size: [3, 2, 5] }, // Tehlikeli Madde Kırmızı
-            { color: 0x2244cc, size: [4, 2, 3] }, // Standart Kargo Mavi
-            { color: 0xccaa22, size: [2.5, 2.5, 4] } // Soğutuculu Sarı
+            { color: 0xcc2222, size: [3, 2, 5] }, 
+            { color: 0x2244cc, size: [4, 2, 3] }, 
+            { color: 0xccaa22, size: [2.5, 2.5, 4] } 
         ];
 
-        const containerPositions = [
-            {-3, 1.5, -5}, {3, 1.5, -2}, {-2.5, 1.5, 4}, {3, 1.5, 7}
-        ];
-
-        // Güverte üstü siper alınabilir konteyner yerleşimi
         const cData = [
             { x: -3, z: -6, type: 0 },
             { x: 3, z: -3, type: 1 },
@@ -133,10 +125,9 @@
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             shipGroup.add(mesh);
-            containers.push(mesh);
         });
 
-        // --- 3 ADET DOST NPC (Stratejik Siper Alan) ---
+        // --- DOST NPC'LER ---
         const npcs = [];
         const npcPositions = [
             { x: -4, z: -8 },
@@ -147,13 +138,11 @@
         npcPositions.forEach((pos, index) => {
             const npcGroup = new THREE.Group();
             
-            // Gövde
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 }); // Askeri yeşil
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
             const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.5), bodyMat);
             body.position.y = 0.75;
             npcGroup.add(body);
 
-            // Baş
             const head = new THREE.Mesh(new THREE.SphereGeometry(0.25), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
             head.position.y = 1.6;
             npcGroup.add(head);
@@ -163,41 +152,33 @@
             npcs.push({ mesh: npcGroup, basePos: pos, patrolTimer: index * 50 });
         });
 
-        // --- KONTROL MEKANİZMASI (Sağ/Sol Düzeltmesi) ---
+        // --- KONTROLLER ---
         const keys = { left: false, right: false };
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;   // Sola çekme düzeltildi
-            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true; // Sağa çekme düzeltildi
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;   
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true; 
         });
         window.addEventListener('keyup', (e) => {
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
             if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
         });
 
-        // Kamera / Oyuncu Rotasyonu için
         let playerAngle = 0;
 
-        // --- ANIMASYON DÖNGÜSÜ ---
+        // --- ANIMASYON ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Kontrollerin İşlenmesi (Terslik giderildi)
-            if (keys.left) {
-                playerAngle += 0.03; // Sola hareket
-            }
-            if (keys.right) {
-                playerAngle -= 0.03; // Sağa hareket
-            }
+            if (keys.left) playerAngle += 0.03;
+            if (keys.right) playerAngle -= 0.03;
 
-            // Kamerayı oynatıcı açısına göre konumlandır
             camera.position.x = Math.sin(playerAngle) * 28;
             camera.position.z = Math.cos(playerAngle) * 28;
             camera.lookAt(0, 0, 0);
 
-            // Dost NPC'lerin hareketleri (Siper alma / Dolaşma simülasyonu)
-            npcs.forEach((npc, idx) => {
+            npcs.forEach((npc) => {
                 npc.patrolTimer += 0.01;
-                npc.mesh.position.x = npc.basePos.x + Math.sin(npc.patrolTimer) * 1.5; // Kolay hedef olmamak için hareketliler
+                npc.mesh.position.x = npc.basePos.x + Math.sin(npc.patrolTimer) * 1.5;
             });
 
             renderer.render(scene, camera);
@@ -205,7 +186,6 @@
 
         animate();
 
-        // Pencere Boyutu Ayarı
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
