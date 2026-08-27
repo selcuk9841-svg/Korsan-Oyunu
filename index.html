@@ -914,13 +914,18 @@ function update(dt) {
 
  /* --- oyuncu hareketi --- */
  fwd.set(Math.sin(player.yaw), 0, Math.cos(player.yaw));
- right.set(Math.cos(player.yaw), 0, -Math.sin(player.yaw));
+ right.set(-Math.cos(player.yaw), 0, Math.sin(player.yaw));
  let mx = 0, mz = 0;
  if (!state.inTurret) {
+ const ax = window.moveAxis;
+ if (ax && ax.mag > 0.09) {
+ mx = ax.x; mz = ax.y;
+ } else {
  if (keys.KeyW) mz += 1;
  if (keys.KeyS) mz -= 1;
  if (keys.KeyA) mx -= 1;
  if (keys.KeyD) mx += 1;
+ }
  }
  player.crouch = !!keys.ControlLeft || !!keys.ControlRight;
  const sprint = keys.ShiftLeft && !player.crouch && !state.scoped;
