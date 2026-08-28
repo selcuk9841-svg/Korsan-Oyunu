@@ -1036,35 +1036,6 @@ function updateHud() {
 }
 
 /* ---------- butonlar ---------- */
-const handleStartGame = async (e) => {
-  if (e) e.preventDefault();
-  
-  try {
-    if (typeof Audio !== 'undefined' && Audio.init) {
-      Audio.init();
-      Audio.resume();
-    }
-  } catch (err) {}
-
-  if (isTouch) {
-    try {
-      const el = document.documentElement;
-      const rf = el.requestFullscreen || el.webkitRequestFullscreen;
-      if (rf) await rf.call(el).catch(() => {});
-      if (screen.orientation && screen.orientation.lock) {
-        await screen.orientation.lock('landscape').catch(() => {});
-      }
-    } catch (err) {}
-  } else {
-    try {
-      renderer.domElement.requestPointerLock();
-    } catch (err) {}
-  }
-
-  $('startScreen').classList.remove('on');
-  state.running = true;
-  startLevel();
-};
 
  $('startBtn').onclick = function (e) {
   if (e) e.preventDefault();
