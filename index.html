@@ -1036,14 +1036,39 @@ function updateHud() {
 }
 
 /* ---------- butonlar ---------- */
-$('startBtn').onclick = () => {
- Audio.init(); Audio.resume();
- $('startScreen').classList.remove('on');
- renderer.domElement.requestPointerLock();
- state.running = true;
- startLevel();
+const handleStartGame = async (e) => {
+  if (e) e.preventDefault();
+  
+  try {
+    if (typeof Audio !== 'undefined' && Audio.init) {
+      Audio.init();
+      Audio.resume();
+    }
+  } catch (err) {}
+
+  if (isTouch) {
+    try {
+      const el = document.documentElement;
+      const rf = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (rf) await rf.call(el).catch(() => {});
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (err) {}
+  } else {
+    try {
+      renderer.domElement.requestPointerLock();
+    } catch (err) {}
+  }
+
+  $('startScreen').classList.remove('on');
+  state.running = true;
+  startLevel();
 };
-$('nextBtn').onclick = () => {
+
+$('startBtn').onclick = handleStartGame;
+$('startBtn').addEventListener('touchstart', handleStartGame, { passive: false });
+ $('nextBtn').onclick = () => {
  $('shopScreen').classList.remove('on');
  state.level++;
  startLevel();
