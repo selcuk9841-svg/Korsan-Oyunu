@@ -1066,8 +1066,22 @@ const handleStartGame = async (e) => {
   startLevel();
 };
 
-$('startBtn').onclick = handleStartGame;
-$('startBtn').addEventListener('touchstart', handleStartGame, { passive: false });
+ $('startBtn').onclick = function (e) {
+  if (e) e.preventDefault();
+  
+  try {
+    if (typeof Audio !== 'undefined' && Audio.init) {
+      Audio.init();
+      Audio.resume();
+    }
+  } catch (err) {}
+
+  const startScr = document.getElementById('startScreen');
+  if (startScr) startScr.classList.remove('on');
+
+  state.running = true;
+  startLevel();
+};
  $('nextBtn').onclick = () => {
  $('shopScreen').classList.remove('on');
  state.level++;
