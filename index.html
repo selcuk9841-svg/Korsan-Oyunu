@@ -1116,7 +1116,13 @@ function update(dt) {
  }
  wp.needsUpdate = true;
  wakeMat.opacity = state.night ? 0.25 : 0.55;
-
+/* --- martilar --- */
+ for (const g of gulls) {
+ g.ang += g.spd * dt;
+ g.mesh.position.set(Math.cos(g.ang) * g.rad, g.y + Math.sin(t * 1.4 + g.ang) * 2.5, Math.sin(g.ang) * g.rad);
+ g.mesh.rotation.y = -g.ang;
+ g.mesh.visible = !state.night && state.weather !== 'storm';
+ }
  /* --- martilar --- */
  for (const g of gulls) {
  g.ang += g.spd * dt;
