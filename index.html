@@ -113,7 +113,14 @@ canvas{display:block}
 </script>
 <script type="module">
 import * as THREE from 'three';
-
+addEventListener('error', (e) => {
+ const d = document.createElement('div');
+ d.style.cssText = 'position:fixed;left:0;top:0;right:0;z-index:99999;background:#a00;color:#fff;' +
+ 'font:12px monospace;padding:10px;white-space:pre-wrap;word-break:break-all';
+ d.textContent = 'HATA: ' + (e.message || '') + ' @ satir ' + (e.lineno || '');
+ document.body.appendChild(d);
+});
+ 
 /* ---------- kisayollar ---------- */
 const $ = (id) => document.getElementById(id);
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
