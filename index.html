@@ -1000,7 +1000,7 @@ function spawnBoat() {
  const b = {
  ...parts,
  hp: hpBase, maxHp: hpBase, speed: Math.min(spd, 26),
- pos: new THREE.Vector3(Math.sin(ang) * dist, 0, Math.cos(ang) * dist + state.shipZ),
+ pos: new THREE.Vector3(Math.sin(ang) * dist, 0, Math.cos(ang) * dist),
  fireCd: rnd(1.5, 4), dead: false, deadT: 0, flashT: 0,
  gold: 18 + lv * 3 + Math.floor(lv / 5) * 14,
  detected: false,
