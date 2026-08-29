@@ -1531,7 +1531,11 @@ function update(dt) {
  a.flash.material.opacity = Math.max(0, a.flashT / 0.06);
  }
  }
-
+/* --- radar tarayicilari doner --- */
+ radarPivot.rotation.y += dt * 1.15;
+ radar2.rotation.y -= dt * 0.8;
+ mastLight.material.emissiveIntensity = state.night ? 2.4 : 0.5;
+ 
  /* --- gece projektorleri --- */
  for (const s of spots) {
  const active = state.night && anyDetected;
