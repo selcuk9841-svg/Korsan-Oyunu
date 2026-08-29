@@ -378,12 +378,174 @@ for (let i = 0; i < STAIR_N; i++) {
  ship.add(r);
  }
 }
+/* ---------- gercekci ust yapi detaylari ---------- */
+const whiteMat = new THREE.MeshStandardMaterial({ color: 0xd9dee3, roughness: 0.72, metalness: 0.28 });
+const accentMat = new THREE.MeshStandardMaterial({ color: 0x1f5f8c, roughness: 0.68, metalness: 0.35 });
+const winMat = new THREE.MeshStandardMaterial({
+ color: 0x16303d, roughness: 0.18, metalness: 0.6, transparent: true, opacity: 0.85
+});
 
-const funnel = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.9, 9, 12), steelRust);
-funnel.position.set(0, BR_TOP + 4.5, DECK_L / 2 - 4);
+// kaide cephesini beyaz yasam blogu gibi kapla (4 cephe panel)
+function facade(w, h, x, y, z, rotY, mat) {
+ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.25), mat);
+ m.position.set(x, y, z); m.rotation.y = rotY;
+ m.castShadow = m.receiveShadow = true;
+ ship.add(m);
+ return m;
+}
+const BW = BR_HW + 0.55, BL = BR_HL + 0.55;
+facade(BW * 2, 8, 0, DECK_Y + 4, BR_Z + BL, 0, whiteMat);
+facade(BW * 2, 8, 0, DECK_Y + 4, BR_Z - BL, 0, whiteMat);
+facade(BL * 2, 8, -BW, DECK_Y + 4, BR_Z, Math.PI / 2, whiteMat);
+facade(BL * 2, 8, BW, DECK_Y + 4, BR_Z, Math.PI / 2, whiteMat);
+
+// yasam katlari: 2 sira lombar penceresi + kat ayirim bandi
+for (let lvl = 0; lvl < 2; lvl++) {
+ const y = DECK_Y + 2.4 + lvl * 3.4;
+ for (const sx of [-1, 1]) {
+ for (let i = 0; i < 5; i++) {
+ const w = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.9, 1.5), winMat);
+ w.position.set(sx * (BW + 0.1), y, BR_Z - BL + 1.8 + i * 2.4);
+ ship.add(w);
+ }
+ }
+ for (let i = 0; i < 7; i++) {
+ const w = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.9, 0.2), winMat);
+ w.position.set(-BW + 1.9 + i * 2.6, y, BR_Z + BL + 0.1);
+ ship.add(w);
+ }
+ const band = new THREE.Mesh(new THREE.BoxGeometry(BW * 2 + 0.6, 0.28, BL * 2 + 0.6), accentMat);
+ band.position.set(0, y + 1.55, BR_Z);
+ ship.add(band);
+}
+
+// kopru kanatlari (bridge wings): iki yana tasan gozetleme platformlari
+function bridgeWing(sx) {
+ const WLEN = 5.5;
+ const pf = new THREE.Mesh(new THREE.BoxGeometry(WLEN, 0.35, 4.4), deckMat);
+ pf.position.set(sx * (BR_HW + WLEN / 2), BR_FLOOR, BR_Z);
+ pf.castShadow = pf.receiveShadow = true;
+ ship.add(pf);
+ for (const dz of [-1.6, 1.6]) {
+ const br = new THREE.Mesh(new THREE.BoxGeometry(WLEN + 0.6, 0.22, 0.22), frameMat);
+ br.position.set(sx * (BR_HW + WLEN / 2), BR_FLOOR - 1.4, BR_Z + dz);
+ br.rotation.z = sx * 0.26;
+ ship.add(br);
+ }
+ const wr = (len, ox, oz, ry) => {
+ const g = new THREE.Group();
+ const par = new THREE.Mesh(new THREE.BoxGeometry(len, 0.5, 0.16), parapetMat);
+ par.position.y = 0.25; g.add(par);
+ for (const hy of [0.78, 1.2]) {
+ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, len, 6), railMat);
+ b.rotation.z = Math.PI / 2; b.position.y = hy; g.add(b);
+ }
+ const n = Math.max(2, Math.round(len / 1.4));
+ for (let i = 0; i <= n; i++) {
+ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 1.25, 6), railMat);
+ p.position.set(-len / 2 + (len / n) * i, 0.62, 0); g.add(p);
+ }
+ g.position.set(ox, BR_FLOOR + 0.18, oz);
+ g.rotation.y = ry;
+ ship.add(g);
+ };
+ wr(WLEN, sx * (BR_HW + WLEN / 2), BR_Z - 2.2, 0);
+ wr(WLEN, sx * (BR_HW + WLEN / 2), BR_Z + 2.2, 0);
+ wr(4.4, sx * (BR_HW + WLEN), BR_Z, Math.PI / 2);
+ const lamp = new THREE.Mesh(
+ new THREE.SphereGeometry(0.3, 10, 8),
+ new THREE.MeshStandardMaterial({
+ color: sx < 0 ? 0xff2a2a : 0x22ff5a,
+ emissive: sx < 0 ? 0xff2a2a : 0x22ff5a, emissiveIntensity: 1.6
+ })
+ );
+ lamp.position.set(sx * (BR_HW + WLEN - 0.3), BR_FLOOR + 1.7, BR_Z);
+ ship.add(lamp);
+ boxes.push({
+ x: sx * (BR_HW + WLEN / 2), z: BR_Z,
+ hw: WLEN / 2, hl: 2.2, top: BR_FLOOR + 0.18, bottom: BR_FLOOR - 0.4
+ });
+}
+bridgeWing(-1); bridgeWing(1);
+
+// kopru catisi cevresi korkuluk
+for (const [len, ox, oz, ry] of [
+ [BR_HW * 2, 0, BR_Z - BR_HL, 0], [BR_HW * 2, 0, BR_Z + BR_HL, 0],
+ [BR_HL * 2, -BR_HW, BR_Z, Math.PI / 2], [BR_HL * 2, BR_HW, BR_Z, Math.PI / 2],
+]) {
+ const g = new THREE.Group();
+ for (const hy of [0.5, 0.95]) {
+ const b = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, len, 6), railMat);
+ b.rotation.z = Math.PI / 2; b.position.y = hy; g.add(b);
+ }
+ const n = Math.round(len / 1.6);
+ for (let i = 0; i <= n; i++) {
+ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1, 6), railMat);
+ p.position.set(-len / 2 + (len / n) * i, 0.5, 0); g.add(p);
+ }
+ g.position.set(ox, BR_TOP + 0.25, oz);
+ g.rotation.y = ry;
+ ship.add(g);
+}
+
+// radar diregi + donen radar tarayici + antenler
+const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 9, 8), whiteMat);
+mast.position.set(0, BR_TOP + 4.8, BR_Z - 1.5);
+mast.castShadow = true;
+ship.add(mast);
+for (const cy of [BR_TOP + 3.2, BR_TOP + 6.4]) {
+ const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 7.5, 6), whiteMat);
+ yard.rotation.z = Math.PI / 2;
+ yard.position.set(0, cy, BR_Z - 1.5);
+ ship.add(yard);
+}
+const radarPivot = new THREE.Group();
+radarPivot.position.set(0, BR_TOP + 9.2, BR_Z - 1.5);
+ship.add(radarPivot);
+const radarBar = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.34, 0.5), whiteMat);
+radarBar.castShadow = true;
+radarPivot.add(radarBar);
+const radarHub = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.8, 10), frameMat);
+radarHub.position.y = -0.55;
+radarPivot.add(radarHub);
+const radar2 = new THREE.Group();
+radar2.position.set(0, BR_TOP + 7.4, BR_Z - 1.5);
+ship.add(radar2);
+const rb2 = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.26, 0.4), whiteMat);
+radar2.add(rb2);
+const mastLight = new THREE.Mesh(
+ new THREE.SphereGeometry(0.26, 10, 8),
+ new THREE.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xfff4d0, emissiveIntensity: 1.4 })
+);
+mastLight.position.set(0, BR_TOP + 9.9, BR_Z - 1.5);
+ship.add(mastLight);
+
+/* ---------- baca: gercekci govde + sirt bandi + egzoz agzi ---------- */
+const funnelHousing = new THREE.Mesh(new THREE.BoxGeometry(6.4, 6, 5.4), whiteMat);
+funnelHousing.position.set(0, BR_TOP + 2.8, DECK_L / 2 - 4);
+funnelHousing.castShadow = funnelHousing.receiveShadow = true;
+ship.add(funnelHousing);
+
+const funnel = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.7, 9.5, 16), whiteMat);
+funnel.position.set(0, BR_TOP + 10, DECK_L / 2 - 4);
 funnel.castShadow = true;
 ship.add(funnel);
-/* ---------- mitralyoz mevzileri ---------- */
+const funnelBand = new THREE.Mesh(new THREE.CylinderGeometry(2.24, 2.34, 2.6, 16), accentMat);
+funnelBand.position.set(0, BR_TOP + 11.4, DECK_L / 2 - 4);
+ship.add(funnelBand);
+const funnelCap = new THREE.Mesh(
+ new THREE.CylinderGeometry(2.1, 2.1, 0.5, 16),
+ new THREE.MeshStandardMaterial({ color: 0x14181c, roughness: 0.95, metalness: 0.1 })
+);
+funnelCap.position.set(0, BR_TOP + 14.85, DECK_L / 2 - 4);
+ship.add(funnelCap);
+for (const sx of [-1, 1]) {
+ const p = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 8, 8), steelRust);
+ p.position.set(sx * 2.5, BR_TOP + 9.2, DECK_L / 2 - 4);
+ ship.add(p);
+}
+
+ /* ---------- mitralyoz mevzileri ---------- */
 const turrets = [];
 function addTurret(x, z) {
  const g = new THREE.Group();
