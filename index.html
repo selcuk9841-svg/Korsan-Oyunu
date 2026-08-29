@@ -540,58 +540,94 @@ const Audio = (() => {
  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
  src.connect(f); f.connect(g); g.connect(master); src.start(t);
  }
+/* ---- gercekci silah sesi motoru ----
+ katmanlar: supersonic crack -> namlu patlamasi -> alt bas itis
+ -> guverte metal cinlamasi -> deniz uzeri gecikmeli yanki kuyrugu
+ -> mekanik surgu/kovan sesi. Her atis hafif rastgele => tekrar hissi yok. */
+
+ // dolgun stereo gurultu tamponu (iki kanal bagimsiz = genis alan)
+ function noiseBuf(dur, shape) {
+ const len = Math.max(1, (ctx.sampleRate * dur) | 0);
+ const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+ for (let ch = 0; ch < 2; ch++) {
+ const d = buf.getChannelData(ch);
+ for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * shape(i / len);
+ }
+ return buf;
+ }
+ function src(buf) { const s = ctx.createBufferSource(); s.buffer = buf; return s; }
+
  function gunshot(o) {
  if (!ctx) return;
  const t = ctx.currentTime;
- const out = ctx.createGain(); out.gain.value = o.vol; out.connect(master);
- const crackLen = Math.max(1, (ctx.sampleRate * 0.035) | 0);
- const cb = ctx.createBuffer(1, crackLen, ctx.sampleRate);
- const cd = cb.getChannelData(0);
- for (let i = 0; i < crackLen; i++) {
- const e = Math.pow(1 - i / crackLen, 2.4);
- cd[i] = (Math.random() * 2 - 1) * e;
- }
- const cs = ctx.createBufferSource(); cs.buffer = cb;
- const chp = ctx.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 1400;
- const cg = ctx.createGain(); cg.gain.value = 1.15;
- cs.connect(chp); chp.connect(cg); cg.connect(out); cs.start(t);
- const bodyLen = Math.max(1, (ctx.sampleRate * o.body) | 0);
- const bb = ctx.createBuffer(1, bodyLen, ctx.sampleRate);
- const bd = bb.getChannelData(0);
- for (let i = 0; i < bodyLen; i++) {
- const e = Math.pow(1 - i / bodyLen, 3.1);
- bd[i] = (Math.random() * 2 - 1) * e;
- }
- const bs = ctx.createBufferSource(); bs.buffer = bb;
+ const jit = 1 + rnd(-0.06, 0.06); // atis basina ton sapmasi
+ const out = ctx.createGain();
+ out.gain.value = o.vol * rnd(0.94, 1.06);
+ out.connect(master);
+
+ /* 1) SUPERSONIC CRACK - merminin ses duvarini yarmasi (cok kisa, cok keskin) */
+ const cs = src(noiseBuf(0.028, (p) => Math.pow(1 - p, 3.2)));
+ cs.playbackRate.value = jit;
+ const chp = ctx.createBiquadFilter(); chp.type = 'highpass'; chp.frequency.value = 2100 * jit;
+ const cpk = ctx.createBiquadFilter(); cpk.type = 'peaking';
+ cpk.frequency.value = 3800 * jit; cpk.Q.value = 1.1; cpk.gain.value = 9;
+ const cg = ctx.createGain(); cg.gain.value = o.crack;
+ cs.connect(chp); chp.connect(cpk); cpk.connect(cg); cg.connect(out); cs.start(t);
+
+ /* 2) NAMLU PATLAMASI - govde, hizli kapanan lowpass = "bam" karakteri */
+ const bs = src(noiseBuf(o.body, (p) => Math.pow(1 - p, 2.6)));
+ bs.playbackRate.value = jit;
  const blp = ctx.createBiquadFilter(); blp.type = 'lowpass';
- blp.frequency.setValueAtTime(o.cut, t);
- blp.frequency.exponentialRampToValueAtTime(220, t + o.body);
- blp.Q.value = 1.4;
- const bg = ctx.createGain(); bg.gain.value = 1;
- bs.connect(blp); blp.connect(bg); bg.connect(out); bs.start(t);
+ blp.frequency.setValueAtTime(o.cut * jit, t);
+ blp.frequency.exponentialRampToValueAtTime(180, t + o.body);
+ blp.Q.value = 3.2;
+ const bpk = ctx.createBiquadFilter(); bpk.type = 'peaking';
+ bpk.frequency.value = o.punch; bpk.Q.value = 0.9; bpk.gain.value = 8;
+ bs.connect(blp); blp.connect(bpk); bpk.connect(out); bs.start(t);
+
+ /* 3) ALT BAS ITIS - gogusde hissedilen thump */
  const th = ctx.createOscillator(); th.type = 'sine';
- th.frequency.setValueAtTime(o.thump, t);
- th.frequency.exponentialRampToValueAtTime(34, t + o.body * 0.9);
+ th.frequency.setValueAtTime(o.thump * jit, t);
+ th.frequency.exponentialRampToValueAtTime(30, t + o.body * 1.1);
  const tg = ctx.createGain();
- tg.gain.setValueAtTime(0.7, t);
- tg.gain.exponentialRampToValueAtTime(0.001, t + o.body * 1.05);
- th.connect(tg); tg.connect(out); th.start(t); th.stop(t + o.body * 1.15);
+ tg.gain.setValueAtTime(0.0001, t);
+ tg.gain.exponentialRampToValueAtTime(0.85, t + 0.004);
+ tg.gain.exponentialRampToValueAtTime(0.001, t + o.body * 1.25);
+ th.connect(tg); tg.connect(out); th.start(t); th.stop(t + o.body * 1.4);
+
+ /* 4) GUVERTE METAL CINLAMASI - konteynerlerden donen tiz metalik ton */
+ const ring = ctx.createOscillator(); ring.type = 'triangle';
+ ring.frequency.value = rnd(2400, 3200);
+ const rg = ctx.createGain();
+ rg.gain.setValueAtTime(0.06 * o.metal, t + 0.012);
+ rg.gain.exponentialRampToValueAtTime(0.0008, t + 0.22);
+ ring.connect(rg); rg.connect(out); ring.start(t + 0.012); ring.stop(t + 0.25);
+
+ /* 5) YANKI KUYRUGU - iki gecikmeli katman, deniz/gemi akustigi */
  if (o.tail > 0) {
- const tl = Math.max(1, (ctx.sampleRate * o.tail) | 0);
- const tb = ctx.createBuffer(1, tl, ctx.sampleRate);
- const td = tb.getChannelData(0);
- for (let i = 0; i < tl; i++) {
- const e = Math.pow(1 - i / tl, 1.7);
- td[i] = (Math.random() * 2 - 1) * e * 0.5;
- }
- const ts = ctx.createBufferSource(); ts.buffer = tb;
+ const layers = [
+ { d: 0.035, f: 900, q: 0.5, v: 1.0 },
+ { d: 0.11, f: 520, q: 0.7, v: 0.62 },
+ ];
+ for (const L of layers) {
+ const ts = src(noiseBuf(o.tail * (1 + L.d * 2), (p) => Math.pow(1 - p, 1.55)));
  const tbp = ctx.createBiquadFilter(); tbp.type = 'bandpass';
- tbp.frequency.value = 620; tbp.Q.value = 0.7;
- const tgn = ctx.createGain(); tgn.gain.value = o.tailVol;
+ tbp.frequency.value = L.f; tbp.Q.value = L.q;
+ const tgn = ctx.createGain(); tgn.gain.value = o.tailVol * L.v;
  ts.connect(tbp); tbp.connect(tgn); tgn.connect(out);
- ts.start(t + 0.02);
+ ts.start(t + L.d);
  }
  }
+
+ /* 6) MEKANIK SURGU + KOVAN - silahin fiziksel varligi */
+ const mk = src(noiseBuf(0.05, (p) => Math.pow(1 - p, 5)));
+ const mbp = ctx.createBiquadFilter(); mbp.type = 'bandpass';
+ mbp.frequency.value = rnd(2600, 3600); mbp.Q.value = 2.4;
+ const mg = ctx.createGain(); mg.gain.value = 0.16 * o.metal;
+ mk.connect(mbp); mbp.connect(mg); mg.connect(out);
+ mk.start(t + o.action);
+ }
+ 
  function gull() {
  if (!ctx || Math.random() > 0.6) return;
  const n = 2 + ((Math.random() * 2) | 0);
