@@ -600,7 +600,7 @@ function addAlly(x, z) {
  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6),
  new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0 }));
  flash.position.set(0.3, 1.28, -1.4); g.add(flash);
- g.position.set(x, BR_FLOOR + 0.2, z);
+ g.position.set(x, DECK_Y + 0.3, z);
  ship.add(g);
  const a = { group: g, gun, flash, flashT: 0, fireCd: rnd(0.4, 1.6), x, z };
  allies.push(a);
