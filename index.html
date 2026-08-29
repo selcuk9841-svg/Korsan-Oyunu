@@ -1515,7 +1515,7 @@ function update(dt) {
  }
  if (near && nd < 130) {
  const ax = near.pos.x - a.x;
- const az = near.pos.z - (a.z + state.shipZ);
+ const az = near.pos.z - a.z;
  a.group.rotation.y = Math.atan2(ax, az) + Math.PI;
  a.fireCd -= dt;
  if (a.fireCd <= 0) {
