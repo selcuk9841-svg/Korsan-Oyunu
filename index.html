@@ -1510,7 +1510,7 @@ function update(dt) {
  let near = null, nd = 1e9;
  for (const b of boats) {
  if (b.dead) continue;
- const d = Math.hypot(b.pos.x - a.x, b.pos.z - (a.z + state.shipZ));
+ const d = Math.hypot(b.pos.x - a.x, b.pos.z - a.z);
  if (d < nd) { nd = d; near = b; }
  }
  if (near && nd < 130) {
