@@ -196,7 +196,7 @@ const deckMat = new THREE.MeshStandardMaterial({ color: 0x4a5560, roughness: 0.9
 const DECK_W = 34, DECK_L = 120, DECK_Y = 0;
 
 const hull = new THREE.Mesh(new THREE.BoxGeometry(DECK_W + 3, 30, DECK_L + 6), steelDark);
-hull.position.y = DECK_Y - 7.2;
+hull.position.y = DECK_Y - 15.2;
 hull.castShadow = hull.receiveShadow = true;
 ship.add(hull);
 
